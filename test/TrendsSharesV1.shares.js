@@ -1,4 +1,7 @@
-const {newToken, newSharesV1, expectRevert, expectRevertCustomError} = require("./utils");
+const {
+    newToken, newSharesV1, expectRevert, expectRevertCustomError, subject0, share1Price, maxInAmount, eth_1,
+    initBalance, share2Price, share3Price, subject1, minOutAmount
+} = require("./utils");
 const {expect} = require('chai');
 
 const {
@@ -6,17 +9,9 @@ const {
     expectEvent, BN,  // Assertions for emitted events
 } = require('@openzeppelin/test-helpers');
 const {toWei} = require("web3-utils");
+const {ZERO_ADDRESS} = require("@openzeppelin/test-helpers/src/constants");
 
 
-const subject0 = "0x0000000000000000000000000000000000000000000000000000000000000000";
-const subject1 = "0x0100000000000000000000000000000000000000000000000000000000000000";
-
-const eth_1 = new BN(toWei('1', 'ether'));
-const share1Price = new BN("1").pow(new BN("2")).mul(new BN(toWei(1, 'ether'))).divn(16000);
-const share2Price = new BN("2").pow(new BN("2")).mul(new BN(toWei(1, 'ether'))).divn(16000);
-const share3Price = new BN("3").pow(new BN("2")).mul(new BN(toWei(1, 'ether'))).divn(16000);
-
-const initBalance = new BN(toWei('1', 'ether'));
 const protocolFeePercent = new BN(toWei('1', 'ether')).divn(100);
 const lpFarmingFeePercent = new BN(toWei('2', 'ether')).divn(100);
 const holderFeePercent = new BN(toWei('4', 'ether')).divn(100);
@@ -26,9 +21,6 @@ const lpFarmingFee = share1Price.mul(lpFarmingFeePercent).div(eth_1);
 const creatorFee = share1Price.mul(creatorFeePercent).div(eth_1);
 const holderFee = share1Price.mul(holderFeePercent).div(eth_1);
 const totalFees = protocolFee.add(lpFarmingFee).add(creatorFee).add(holderFee);
-
-const maxInAmount = new BN(toWei('100', 'ether'));
-const minOutAmount = new BN(0);
 
 let trendsToken;
 let trendsSharesV1;
@@ -135,6 +127,10 @@ contract('TrendsSharesV1', function (accounts) {
             expect(await trendsSharesV1.sharesBalance(subject0, buyer1)).to.be.bignumber.equal(new BN(2));
         });
 
+        it('fails if recipient is zero address ', async function () {
+            await expectRevertCustomError(trendsSharesV1.buyShares(ZERO_ADDRESS, subject0, 1, share1Price.subn(1), {from: buyer1}), "Address0");
+        });
+
         it('fails if max in amount not enough', async function () {
             await expectRevertCustomError(trendsSharesV1.buyShares(buyer1, subject0, 1, share1Price.subn(1), {from: buyer1}), "InAmountNotEnough");
         });
@@ -187,12 +183,22 @@ contract('TrendsSharesV1', function (accounts) {
             expect(await trendsToken.balanceOf(buyer1)).to.be.bignumber.equal(initBalance);
         });
 
+        it('balance correct after sell 2 share and hold 0 share', async function () {
+            await trendsSharesV1.buyShares(buyer1, subject0, 1, maxInAmount, {from: buyer1});
+            await trendsSharesV1.sellShares(buyer1, subject0, 2, minOutAmount, {from: buyer1});
+            expect(await trendsSharesV1.sharesSupply(subject0)).to.be.bignumber.equal(new BN(1));
+            expect(await trendsSharesV1.sharesBalance(subject0, buyer1)).to.be.bignumber.equal(new BN(0));
+            expect(await trendsToken.balanceOf(trendsSharesV1.address)).to.be.bignumber.equal(new BN(0));
+            expect(await trendsToken.balanceOf(buyer1)).to.be.bignumber.equal(initBalance);
+        });
+
         it('balance correct after sell 1 share and hold 1 share', async function () {
             await trendsSharesV1.buyShares(buyer1, subject0, 1, maxInAmount, {from: buyer1});
             await trendsSharesV1.sellShares(buyer1, subject0, 1, minOutAmount, {from: buyer1});
             expect(await trendsSharesV1.sharesSupply(subject0)).to.be.bignumber.equal(new BN(2));
             expect(await trendsSharesV1.sharesBalance(subject0, buyer1)).to.be.bignumber.equal(new BN(1));
         });
+
 
         it('fails if min out amount not enough', async function () {
             await expectRevertCustomError(trendsSharesV1.sellShares(buyer1, subject0, 1, share1Price.addn(1), {from: buyer1}), "OutAmountNotEnough");
