@@ -25,7 +25,11 @@ async function expectRevertCustomError(promise, expectedErrorName) {
         await promise;
     } catch (error) {
         const encoded = web3.eth.abi.encodeFunctionSignature(expectedErrorName + '()');
-        expect(error.data.result).to.eq(encoded);
+        if (error.data !== undefined) {
+            expect(error.data.result).to.eq(encoded);
+        }else {
+            expect(error.message).to.contains(expectedErrorName);
+        }
         return;
     }
     expect.fail('Expected an exception but none was received');
