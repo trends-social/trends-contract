@@ -69,7 +69,7 @@ contract('TrendsSharesV1', function (accounts) {
         });
         it('shares supply and holder will change after create shares', async function () {
             expect(await trendsSharesV1.sharesSupply(subject0)).to.be.bignumber.equal(new BN(1));
-            expect(await tgitrendsSharesV1.sharesBalance(subject0, creator1)).to.be.bignumber.equal(new BN(1));
+            expect(await trendsSharesV1.sharesBalance(subject0, creator1)).to.be.bignumber.equal(new BN(1));
         });
 
         it('creator can create several shares', async function () {
