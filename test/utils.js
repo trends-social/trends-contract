@@ -20,8 +20,21 @@ async function expectRevert(promise, errorMsg) {
     );
 }
 
+async function expectRevertCustomError(promise, expectedErrorName) {
+    try {
+        await promise;
+    } catch (error) {
+        const encoded = web3.eth.abi.encodeFunctionSignature(expectedErrorName + '()');
+        expect(error.data.result).to.eq(encoded);
+        return;
+    }
+    expect.fail('Expected an exception but none was received');
+}
+
+
 module.exports = {
     newSharesV1,
     newToken,
-    expectRevert
+    expectRevert,
+    expectRevertCustomError
 };

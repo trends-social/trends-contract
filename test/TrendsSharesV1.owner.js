@@ -1,11 +1,11 @@
-const {newToken, newSharesV1, expectRevert} = require("./utils");
+const {newToken, newSharesV1, expectRevert, expectRevertCustomError} = require("./utils");
 const {BN} = require("@openzeppelin/test-helpers");
 const {expect} = require('chai');
 const {toWei} = require("web3-utils");
 
 contract('TrendsSharesV1', function (accounts) {
     const onlyOwnerError = "caller is not the owner";
-    const invalidFeeError = "invalid";
+    const invalidFeeError = "InvalidParams";
     const eth_1 = new BN(toWei('1', 'ether'));
     let trendsToken;
     let trendsSharesV1;
@@ -38,7 +38,7 @@ contract('TrendsSharesV1', function (accounts) {
         await trendsSharesV1.setProtocolFeePercent(1, {from: developer});
         expect(await trendsSharesV1.protocolFeePercent()).to.be.bignumber.equal(new BN(1));
         await expectRevert(trendsSharesV1.setProtocolFeePercent(1, {from: acc1}), onlyOwnerError);
-        await expectRevert(trendsSharesV1.setProtocolFeePercent(eth_1, {from: developer}), invalidFeeError);
+        await expectRevertCustomError(trendsSharesV1.setProtocolFeePercent(eth_1, {from: developer}), invalidFeeError);
 
     });
 
@@ -46,21 +46,20 @@ contract('TrendsSharesV1', function (accounts) {
         await trendsSharesV1.setLpFarmingFeePercent(1, {from: developer});
         expect(await trendsSharesV1.lpFarmingFeePercent()).to.be.bignumber.equal(new BN(1));
         await expectRevert(trendsSharesV1.setLpFarmingFeePercent(1, {from: acc1}), onlyOwnerError);
-        await expectRevert(trendsSharesV1.setLpFarmingFeePercent(eth_1, {from: developer}), invalidFeeError);
-
+        await expectRevertCustomError(trendsSharesV1.setLpFarmingFeePercent(eth_1, {from: developer}), invalidFeeError);
     });
 
     it('set holder fee percent only owner', async function () {
         await trendsSharesV1.setHolderFeePercent(1, {from: developer});
         expect(await trendsSharesV1.holderFeePercent()).to.be.bignumber.equal(new BN(1));
         await expectRevert(trendsSharesV1.setHolderFeePercent(1, {from: acc1}), onlyOwnerError);
-        await expectRevert(trendsSharesV1.setHolderFeePercent(eth_1, {from: developer}), invalidFeeError);
+        await expectRevertCustomError(trendsSharesV1.setHolderFeePercent(eth_1, {from: developer}), invalidFeeError);
     });
 
     it('set creator fee percent only owner', async function () {
         await trendsSharesV1.setCreatorFeePercent(1, {from: developer});
         expect(await trendsSharesV1.creatorFeePercent()).to.be.bignumber.equal(new BN(1));
         await expectRevert(trendsSharesV1.setCreatorFeePercent(1, {from: acc1}), onlyOwnerError);
-        await expectRevert(trendsSharesV1.setCreatorFeePercent(eth_1, {from: developer}), invalidFeeError);
+        await expectRevertCustomError(trendsSharesV1.setCreatorFeePercent(eth_1, {from: developer}), invalidFeeError);
     });
 });

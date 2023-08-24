@@ -7,6 +7,16 @@ import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeE
 contract TrendsSharesV1 is Ownable {
     using SafeERC20 for IERC20;
 
+    error ShareCreated();
+    error ShareNotExists();
+    error Address0();
+    error InAmountNotEnough();
+    error OutAmountNotEnough();
+    error CannotSellLastShare();
+    error InsufficientShares();
+    error NoRewards();
+    error InvalidParams();
+
     event Create(address creator, bytes32 subject);
 
     event Trade(
@@ -58,7 +68,7 @@ contract TrendsSharesV1 is Ownable {
     }
 
     function createShares(bytes32 subject) external {
-        require(sharesCreator[subject] == address(0), "shares exists");
+        if (sharesCreator[subject] != address(0)) revert ShareCreated();
         sharesCreator[subject] = msg.sender;
         emit Create(msg.sender, subject);
         _buyShares(msg.sender, subject, 1, 0);
@@ -70,11 +80,12 @@ contract TrendsSharesV1 is Ownable {
 
     function _buyShares(address recipient, bytes32 subject, uint256 shares, uint256 maxInAmount) internal {
         uint256 supply = sharesSupply[subject];
-        require(supply > 0 || sharesCreator[subject] == recipient, "only creator can buy first share");
+        if (recipient == address(0)) revert Address0();
+        if (supply == 0 && sharesCreator[subject] != recipient) revert ShareNotExists();
         uint256 price = getPrice(supply, shares);
         (uint256 protocolFee, uint256 lpFarmingFee, uint256 creatorFee, uint256 holderFee) = _getFees(price);
-        uint totalInAmount = price + protocolFee + lpFarmingFee + creatorFee + holderFee;
-        require(maxInAmount >= totalInAmount, "in amount is not enough");
+        uint256 totalInAmount = price + protocolFee + lpFarmingFee + creatorFee + holderFee;
+        if (totalInAmount > maxInAmount) revert InAmountNotEnough();
         //update shares reward
         _updateSharesReward(subject, holderFee, recipient);
         sharesBalance[subject][recipient] = sharesBalance[subject][recipient] + shares;
@@ -89,12 +100,12 @@ contract TrendsSharesV1 is Ownable {
 
     function sellShares(address recipient, bytes32 subject, uint256 shares, uint256 minOutAmount) external {
         uint256 supply = sharesSupply[subject];
-        require(supply > shares, "cannot sell the last share");
-        require(sharesBalance[subject][msg.sender] >= shares, "insufficient shares");
+        if (shares >= supply) revert CannotSellLastShare();
+        if (shares > sharesBalance[subject][msg.sender]) revert InsufficientShares();
         uint256 price = getPrice(supply - shares, shares);
         (uint256 protocolFee, uint256 lpFarmingFee, uint256 creatorFee, uint256 holderFee) = _getFees(price);
-        uint totalOutAmount = price - protocolFee - lpFarmingFee - creatorFee - holderFee;
-        require(totalOutAmount >= minOutAmount, "out amount is not enough");
+        uint256 totalOutAmount = price - protocolFee - lpFarmingFee - creatorFee - holderFee;
+        if (totalOutAmount < minOutAmount) revert OutAmountNotEnough();
         //update shares reward
         _updateSharesReward(subject, holderFee, msg.sender);
         sharesBalance[subject][msg.sender] = sharesBalance[subject][msg.sender] - shares;
@@ -156,7 +167,7 @@ contract TrendsSharesV1 is Ownable {
     function withdrawReward(bytes32 subject) external {
         _updateHolderReward(subject, msg.sender);
         uint256 reward = holderSharesReward[subject][msg.sender].reward;
-        require(reward > 0, "No rewards");
+        if (reward == 0) revert NoRewards();
         holderSharesReward[subject][msg.sender].reward = 0;
         emit WithdrawReward(msg.sender, subject, reward);
         TRENDS.safeTransfer(msg.sender, reward);
@@ -196,22 +207,22 @@ contract TrendsSharesV1 is Ownable {
     }
 
     function setProtocolFeePercent(uint256 _protocolFeePercent) external onlyOwner {
-        require(_protocolFeePercent < 1 ether, "invalid protocolFeePercent");
+        if (_protocolFeePercent >= 1 ether) revert InvalidParams();
         protocolFeePercent = _protocolFeePercent;
     }
 
     function setLpFarmingFeePercent(uint256 _lpFarmingFeePercent) external onlyOwner {
-        require(_lpFarmingFeePercent < 1 ether, "invalid lpFarmingFeePercent");
+        if (_lpFarmingFeePercent >= 1 ether) revert InvalidParams();
         lpFarmingFeePercent = _lpFarmingFeePercent;
     }
 
     function setCreatorFeePercent(uint256 _creatorFeePercent) external onlyOwner {
-        require(_creatorFeePercent < 1 ether, "invalid creatorFeePercent");
+        if (_creatorFeePercent >= 1 ether) revert InvalidParams();
         creatorFeePercent = _creatorFeePercent;
     }
 
     function setHolderFeePercent(uint256 _holderFeePercent) external onlyOwner {
-        require(_holderFeePercent < 1 ether, "invalid holderFeePercent");
+        if (_holderFeePercent >= 1 ether) revert InvalidParams();
         holderFeePercent = _holderFeePercent;
     }
 }

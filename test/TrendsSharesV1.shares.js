@@ -1,4 +1,4 @@
-const {newToken, newSharesV1, expectRevert} = require("./utils");
+const {newToken, newSharesV1, expectRevert, expectRevertCustomError} = require("./utils");
 const {expect} = require('chai');
 
 const {
@@ -10,7 +10,6 @@ const {toWei} = require("web3-utils");
 
 const subject0 = "0x0000000000000000000000000000000000000000000000000000000000000000";
 const subject1 = "0x0100000000000000000000000000000000000000000000000000000000000000";
-const subject2 = "0x0200000000000000000000000000000000000000000000000000000000000000";
 
 const eth_1 = new BN(toWei('1', 'ether'));
 const share1Price = new BN("1").pow(new BN("2")).mul(new BN(toWei(1, 'ether'))).divn(16000);
@@ -39,7 +38,6 @@ let developer;
 contract('TrendsSharesV1', function (accounts) {
     developer = accounts[0];
     let creator1 = accounts[1];
-    let creator2 = accounts[2];
     let buyer1 = accounts[3];
     let buyer2 = accounts[4];
     protocolFeeDestination = accounts[5];
@@ -80,7 +78,7 @@ contract('TrendsSharesV1', function (accounts) {
         });
 
         it('fails if shares exists', async function () {
-            await expectRevert(trendsSharesV1.createShares(subject0, {from: creator1}), "shares exists");
+            await expectRevertCustomError(trendsSharesV1.createShares(subject0, {from: creator1}), "ShareCreated");
         });
     });
 
@@ -138,11 +136,11 @@ contract('TrendsSharesV1', function (accounts) {
         });
 
         it('fails if max in amount not enough', async function () {
-            await expectRevert(trendsSharesV1.buyShares(buyer1, subject0, 1, share1Price.subn(1), {from: buyer1}), "in amount is not enough");
+            await expectRevertCustomError(trendsSharesV1.buyShares(buyer1, subject0, 1, share1Price.subn(1), {from: buyer1}), "InAmountNotEnough");
         });
 
         it('fails if shares not existing', async function () {
-            await expectRevert(trendsSharesV1.buyShares(buyer1, subject1, 1, maxInAmount, {from: buyer1}), "only creator can buy first share");
+            await expectRevertCustomError(trendsSharesV1.buyShares(buyer1, subject1, 1, maxInAmount, {from: buyer1}), "ShareNotExists");
         });
 
         it('fails if spend insufficient token', async function () {
@@ -197,19 +195,19 @@ contract('TrendsSharesV1', function (accounts) {
         });
 
         it('fails if min out amount not enough', async function () {
-            await expectRevert(trendsSharesV1.sellShares(buyer1, subject0, 1, share1Price.addn(1), {from: buyer1}), "out amount is not enough");
+            await expectRevertCustomError(trendsSharesV1.sellShares(buyer1, subject0, 1, share1Price.addn(1), {from: buyer1}), "OutAmountNotEnough");
         });
 
         it('fails if sell amount exceeds balance', async function () {
             await trendsToken.transfer(buyer2, initBalance, {from: developer});
             await trendsToken.approve(trendsSharesV1.address, initBalance, {from: buyer2});
             await trendsSharesV1.buyShares(buyer2, subject0, 1, maxInAmount, {from: buyer2});
-            await expectRevert(trendsSharesV1.sellShares(buyer1, subject0, 2, minOutAmount, {from: buyer1}), "insufficient shares");
+            await expectRevertCustomError(trendsSharesV1.sellShares(buyer1, subject0, 2, minOutAmount, {from: buyer1}), "InsufficientShares");
         });
 
         it('fails if sell the last share', async function () {
             await trendsSharesV1.sellShares(creator1, subject0, 1, minOutAmount, {from: creator1});
-            await expectRevert(trendsSharesV1.sellShares(buyer1, subject0, 1, minOutAmount, {from: buyer1}), "cannot sell the last share");
+            await expectRevertCustomError(trendsSharesV1.sellShares(buyer1, subject0, 1, minOutAmount, {from: buyer1}), "CannotSellLastShare");
         });
 
     });
