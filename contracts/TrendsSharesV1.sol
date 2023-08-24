@@ -74,6 +74,10 @@ contract TrendsSharesV1 is Ownable {
         _buyShares(msg.sender, subject, 1, 0);
     }
 
+    function getShares(bytes32 subject, address holder) external view returns (uint256) {
+        return sharesBalance[subject][holder];
+    }
+
     function buyShares(address recipient, bytes32 subject, uint256 shares, uint256 maxInAmount) external {
         _buyShares(recipient, subject, shares, maxInAmount);
     }
