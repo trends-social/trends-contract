@@ -58,21 +58,23 @@ contract TrendsSharesV1 is Ownable {
     }
 
     function createShares(bytes32 subject) external {
-        require(sharesCreator[subject] == address(0), "Shares exists");
+        require(sharesCreator[subject] == address(0), "shares exists");
         sharesCreator[subject] = msg.sender;
         emit Create(msg.sender, subject);
-        _buyShares(msg.sender, subject, 1);
+        _buyShares(msg.sender, subject, 1, 0);
     }
 
-    function buyShares(address recipient, bytes32 subject, uint256 shares) external {
-        _buyShares(recipient, subject, shares);
+    function buyShares(address recipient, bytes32 subject, uint256 shares, uint256 maxInAmount) external {
+        _buyShares(recipient, subject, shares, maxInAmount);
     }
 
-    function _buyShares(address recipient, bytes32 subject, uint256 shares) internal {
+    function _buyShares(address recipient, bytes32 subject, uint256 shares, uint256 maxInAmount) internal {
         uint256 supply = sharesSupply[subject];
-        require(supply > 0 || sharesCreator[subject] == recipient, "Only creator can buy first share");
+        require(supply > 0 || sharesCreator[subject] == recipient, "only creator can buy first share");
         uint256 price = getPrice(supply, shares);
         (uint256 protocolFee, uint256 lpFarmingFee, uint256 creatorFee, uint256 holderFee) = _getFees(price);
+        uint totalInAmount = price + protocolFee + lpFarmingFee + creatorFee + holderFee;
+        require(maxInAmount >= totalInAmount, "in amount is not enough");
         //update shares reward
         _updateSharesReward(subject, holderFee, recipient);
         sharesBalance[subject][recipient] = sharesBalance[subject][recipient] + shares;
@@ -80,17 +82,19 @@ contract TrendsSharesV1 is Ownable {
         sharesSupply[subject] = totalSupply;
         emit Trade(recipient, subject, true, shares, price, protocolFee, lpFarmingFee, creatorFee, holderFee, totalSupply);
         if (price > 0) {
-            TRENDS.safeTransferFrom(msg.sender, address(this), price + protocolFee + lpFarmingFee + creatorFee + holderFee);
+            TRENDS.safeTransferFrom(msg.sender, address(this), totalInAmount);
             _collectFees(subject, protocolFee, lpFarmingFee, creatorFee);
         }
     }
 
-    function sellShares(address recipient, bytes32 subject, uint256 shares) external {
+    function sellShares(address recipient, bytes32 subject, uint256 shares, uint256 minOutAmount) external {
         uint256 supply = sharesSupply[subject];
-        require(supply > shares, "Cannot sell the last share");
+        require(supply > shares, "cannot sell the last share");
+        require(sharesBalance[subject][msg.sender] >= shares, "insufficient shares");
         uint256 price = getPrice(supply - shares, shares);
         (uint256 protocolFee, uint256 lpFarmingFee, uint256 creatorFee, uint256 holderFee) = _getFees(price);
-        require(sharesBalance[subject][msg.sender] >= shares, "Insufficient shares");
+        uint totalOutAmount = price - protocolFee - lpFarmingFee - creatorFee - holderFee;
+        require(totalOutAmount >= minOutAmount, "out amount is not enough");
         //update shares reward
         _updateSharesReward(subject, holderFee, msg.sender);
         sharesBalance[subject][msg.sender] = sharesBalance[subject][msg.sender] - shares;
@@ -98,7 +102,7 @@ contract TrendsSharesV1 is Ownable {
         sharesSupply[subject] = totalSupply;
         emit Trade(msg.sender, subject, false, shares, price, protocolFee, lpFarmingFee, creatorFee, holderFee, totalSupply);
         if (price > 0) {
-            TRENDS.safeTransfer(recipient, price - protocolFee - lpFarmingFee - creatorFee - holderFee);
+            TRENDS.safeTransfer(recipient, totalOutAmount);
             _collectFees(subject, protocolFee, lpFarmingFee, creatorFee);
         }
     }
