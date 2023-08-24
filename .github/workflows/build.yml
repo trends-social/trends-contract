@@ -15,7 +15,7 @@ jobs:
     name: solhint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: npm install
       - run: npm run solhint
 
@@ -29,7 +29,7 @@ jobs:
       - name: Count Lines of Code (cloc)
         uses: djdefi/cloc-action@3
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v2
         with:
@@ -50,7 +50,7 @@ jobs:
         node-version: [ 18.17.1 ]
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v2
         with:
