@@ -1,0 +1,28 @@
+{
+  "name": "trends-contracts",
+  "version": "1.0.0",
+  "description": "",
+  "main": "truffle-config.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prettier": "prettier --write --plugin=prettier-plugin-solidity --write contracts/**/*.sol contracts/*.sol",
+    "solhint": "./node_modules/.bin/solhint -f table contracts/**/*.sol contracts/*.sol"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.9.3",
+    "chai": "^4.3.7",
+    "web3-utils": "^4.0.5"
+  },
+  "bundleDependencies": [],
+  "devDependencies": {
+    "@openzeppelin/test-helpers": "^0.5.16",
+    "prettier": "^3.0.2",
+    "prettier-plugin-solidity": "^1.1.3"
+  }
+}
