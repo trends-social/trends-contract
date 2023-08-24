@@ -2,6 +2,7 @@ const {BN} = require("@openzeppelin/test-helpers");
 const {toWei} = require("web3-utils");
 const TrendsSharesV1 = artifacts.require("TrendsSharesV1");
 const TrendsToken = artifacts.require("TrendsToken");
+const crypto = require('crypto');
 
 const eth_1 = new BN(toWei('1', 'ether'));
 const share1Price = new BN("1").pow(new BN("2")).mul(new BN(toWei(1, 'ether'))).divn(16000);
@@ -20,7 +21,6 @@ async function newToken(account) {
 async function newSharesV1(token, account) {
     return await TrendsSharesV1.new(token, {from: account});
 }
-
 
 async function expectRevert(promise, errorMsg) {
     await promise.then(
@@ -47,6 +47,21 @@ async function expectRevertCustomError(promise, expectedErrorName) {
 }
 
 
+// Function to hash data
+function hash (data) {
+    return crypto.createHash('sha256').update(data).digest();
+}
+
+// Recursively hash leaf nodes to create Merkle tree
+const merkleize = (nodes) => {
+    if (nodes.length === 1) return nodes[0];
+    const newNodes = [];
+    for (let i = 0; i < nodes.length; i += 2) {
+        newNodes.push(hash(Buffer.concat([nodes[i], nodes[i + 1] || nodes[i]])));
+    }
+    return merkleize(newNodes);
+};
+
 module.exports = {
     newSharesV1,
     newToken,
@@ -60,5 +75,7 @@ module.exports = {
     subject1,
     maxInAmount,
     minOutAmount,
-    initBalance
+    initBalance,
+    merkleize,
+    hash
 };
