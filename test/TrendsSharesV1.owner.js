@@ -18,7 +18,7 @@ contract('TrendsSharesV1', function (accounts) {
 
 
     it('constructor initializes', async function () {
-        expect(await trendsSharesV1.trendsToken()).to.eq(trendsToken.address);
+        expect(await trendsSharesV1.TRENDS()).to.eq(trendsToken.address);
         expect(await trendsSharesV1.owner()).to.eq(developer);
     });
 

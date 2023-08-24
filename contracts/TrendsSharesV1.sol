@@ -25,11 +25,11 @@ contract TrendsSharesV1 is Ownable {
     event WithdrawReward(address trader, bytes32 subject, uint256 reward);
 
     struct HolderReward {
-        uint reward;
-        uint rewardPerSharePaid;
+        uint256 reward;
+        uint256 rewardPerSharePaid;
     }
 
-    IERC20 public immutable trendsToken;
+    IERC20 public immutable TRENDS;
     address public protocolFeeDestination;
     address public lpFarmingAddress;
 
@@ -53,8 +53,8 @@ contract TrendsSharesV1 is Ownable {
     //subject => (holder=> reward) holder's reward
     mapping(bytes32 => mapping(address => HolderReward)) public holderSharesReward;
 
-    constructor(IERC20 _trendsToken) {
-        trendsToken = _trendsToken;
+    constructor(IERC20 _trends) {
+        TRENDS = _trends;
     }
 
     function createShares(bytes32 subject) external {
@@ -70,7 +70,7 @@ contract TrendsSharesV1 is Ownable {
 
     function _buyShares(address recipient, bytes32 subject, uint256 shares) internal {
         uint256 supply = sharesSupply[subject];
-        require(supply > 0 || sharesCreator[subject] == recipient, "Only the shares' subject can buy the first share");
+        require(supply > 0 || sharesCreator[subject] == recipient, "Only creator can buy first share");
         uint256 price = getPrice(supply, shares);
         (uint256 protocolFee, uint256 lpFarmingFee, uint256 creatorFee, uint256 holderFee) = _getFees(price);
         //update shares reward
@@ -80,7 +80,7 @@ contract TrendsSharesV1 is Ownable {
         sharesSupply[subject] = totalSupply;
         emit Trade(recipient, subject, true, shares, price, protocolFee, lpFarmingFee, creatorFee, holderFee, totalSupply);
         if (price > 0) {
-            trendsToken.safeTransferFrom(msg.sender, address(this), price + protocolFee + lpFarmingFee + creatorFee + holderFee);
+            TRENDS.safeTransferFrom(msg.sender, address(this), price + protocolFee + lpFarmingFee + creatorFee + holderFee);
             _collectFees(subject, protocolFee, lpFarmingFee, creatorFee);
         }
     }
@@ -98,7 +98,7 @@ contract TrendsSharesV1 is Ownable {
         sharesSupply[subject] = totalSupply;
         emit Trade(msg.sender, subject, false, shares, price, protocolFee, lpFarmingFee, creatorFee, holderFee, totalSupply);
         if (price > 0) {
-            trendsToken.safeTransfer(recipient, price - protocolFee - lpFarmingFee - creatorFee - holderFee);
+            TRENDS.safeTransfer(recipient, price - protocolFee - lpFarmingFee - creatorFee - holderFee);
             _collectFees(subject, protocolFee, lpFarmingFee, creatorFee);
         }
     }
@@ -139,13 +139,13 @@ contract TrendsSharesV1 is Ownable {
 
     function _collectFees(bytes32 subject, uint256 protocolFee, uint256 lpFarmingFee, uint256 creatorFee) internal {
         if (protocolFee > 0) {
-            trendsToken.safeTransfer(protocolFeeDestination, protocolFee);
+            TRENDS.safeTransfer(protocolFeeDestination, protocolFee);
         }
         if (lpFarmingFee > 0) {
             //TODO
         }
         if (creatorFee > 0) {
-            trendsToken.safeTransfer(sharesCreator[subject], creatorFee);
+            TRENDS.safeTransfer(sharesCreator[subject], creatorFee);
         }
     }
 
@@ -155,7 +155,7 @@ contract TrendsSharesV1 is Ownable {
         require(reward > 0, "No rewards");
         holderSharesReward[subject][msg.sender].reward = 0;
         emit WithdrawReward(msg.sender, subject, reward);
-        trendsToken.safeTransfer(msg.sender, reward);
+        TRENDS.safeTransfer(msg.sender, reward);
     }
 
     function getReward(bytes32 subject, address holder) external view returns (uint256) {

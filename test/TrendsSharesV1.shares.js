@@ -135,7 +135,7 @@ contract('TrendsSharesV1', function (accounts) {
         });
 
         it('fails if shares not existing', async function () {
-            await expectRevert(trendsSharesV1.buyShares(buyer1, subject1, 1, {from: buyer1}), "Only the shares' subject can buy the first share");
+            await expectRevert(trendsSharesV1.buyShares(buyer1, subject1, 1, {from: buyer1}), "Only creator can buy first share");
         });
 
         it('fails if spend insufficient token', async function () {
