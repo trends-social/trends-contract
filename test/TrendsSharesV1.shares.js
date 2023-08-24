@@ -32,6 +32,7 @@ contract('TrendsSharesV1', function (accounts) {
     let creator1 = accounts[1];
     let buyer1 = accounts[3];
     let buyer2 = accounts[4];
+    let buyer3 = accounts[7];
     protocolFeeDestination = accounts[5];
     lpFarmingAddress = accounts[6];
     beforeEach(async () => {
@@ -79,6 +80,8 @@ contract('TrendsSharesV1', function (accounts) {
             await trendsSharesV1.createShares(subject0, {from: creator1});
             await trendsToken.transfer(buyer1, initBalance, {from: developer});
             await trendsToken.approve(trendsSharesV1.address, initBalance, {from: buyer1});
+            await trendsToken.transfer(buyer2, initBalance, {from: developer});
+            await trendsToken.approve(trendsSharesV1.address, initBalance, {from: buyer2});
         });
 
         it('buy shares emit event', async function () {
@@ -127,6 +130,14 @@ contract('TrendsSharesV1', function (accounts) {
             expect(await trendsSharesV1.sharesBalance(subject0, buyer1)).to.be.bignumber.equal(new BN(2));
         });
 
+        it('buyer1,2 can buy shares', async function () {
+            await trendsSharesV1.buyShares(buyer1, subject0, 1, maxInAmount, {from: buyer1});
+            await trendsSharesV1.buyShares(buyer2, subject0, 2, maxInAmount, {from: buyer2});
+            expect(await trendsSharesV1.sharesSupply(subject0)).to.be.bignumber.equal(new BN(4));
+            expect(await trendsSharesV1.sharesBalance(subject0, buyer1)).to.be.bignumber.equal(new BN(1));
+            expect(await trendsSharesV1.sharesBalance(subject0, buyer2)).to.be.bignumber.equal(new BN(2));
+        });
+
         it('fails if recipient is zero address ', async function () {
             await expectRevertCustomError(trendsSharesV1.buyShares(ZERO_ADDRESS, subject0, 1, share1Price.subn(1), {from: buyer1}), "Address0");
         });
@@ -140,7 +151,7 @@ contract('TrendsSharesV1', function (accounts) {
         });
 
         it('fails if spend insufficient token', async function () {
-            await expectRevert(trendsSharesV1.buyShares(buyer1, subject0, 1, maxInAmount, {from: buyer2}), "insufficient allowance");
+            await expectRevert(trendsSharesV1.buyShares(buyer1, subject0, 1, maxInAmount, {from: buyer3}), "insufficient allowance");
         });
 
     });
