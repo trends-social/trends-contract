@@ -1,12 +1,10 @@
-const {newToken, newSharesV1, expectRevert, expectRevertCustomError} = require("./utils");
+const {newToken, newSharesV1, expectRevert, expectRevertCustomError, eth_1} = require("./utils");
 const {BN} = require("@openzeppelin/test-helpers");
 const {expect} = require('chai');
-const {toWei} = require("web3-utils");
 
 contract('TrendsSharesV1', function (accounts) {
     const onlyOwnerError = "caller is not the owner";
     const invalidFeeError = "InvalidParams";
-    const eth_1 = new BN(toWei('1', 'ether'));
     let trendsToken;
     let trendsSharesV1;
     let developer = accounts[0];

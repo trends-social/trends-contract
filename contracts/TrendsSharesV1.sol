@@ -32,7 +32,7 @@ contract TrendsSharesV1 is Ownable {
         uint256 supply
     );
 
-    event WithdrawReward(address trader, bytes32 subject, uint256 reward);
+    event WithdrawReward(address holder, bytes32 subject, uint256 reward);
 
     struct HolderReward {
         uint256 reward;
