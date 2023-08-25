@@ -5,9 +5,10 @@ const TrendsToken = artifacts.require("TrendsToken");
 const crypto = require('crypto');
 
 const eth_1 = new BN(toWei('1', 'ether'));
-const share1Price = new BN("1").pow(new BN("2")).mul(new BN(toWei(1, 'ether'))).divn(16000);
-const share2Price = new BN("2").pow(new BN("2")).mul(new BN(toWei(1, 'ether'))).divn(16000);
-const share3Price = new BN("3").pow(new BN("2")).mul(new BN(toWei(1, 'ether'))).divn(16000);
+const declineRatio = 16000;
+const share1Price = new BN("1").pow(new BN("2")).mul(new BN(toWei(1, 'ether'))).divn(declineRatio);
+const share2Price = new BN("2").pow(new BN("2")).mul(new BN(toWei(1, 'ether'))).divn(declineRatio);
+const share3Price = new BN("3").pow(new BN("2")).mul(new BN(toWei(1, 'ether'))).divn(declineRatio);
 const subject0 = "0x0000000000000000000000000000000000000000000000000000000000000000";
 const subject1 = "0x0100000000000000000000000000000000000000000000000000000000000000";
 const maxInAmount = new BN(toWei('100', 'ether'));
@@ -48,7 +49,7 @@ async function expectRevertCustomError(promise, expectedErrorName) {
 
 
 // Function to hash data
-function hash (data) {
+function hash(data) {
     return crypto.createHash('sha256').update(data).digest();
 }
 
@@ -67,6 +68,7 @@ module.exports = {
     newToken,
     expectRevert,
     expectRevertCustomError,
+    declineRatio,
     eth_1,
     share1Price,
     share2Price,

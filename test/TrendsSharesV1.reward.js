@@ -6,7 +6,7 @@ const {
     initBalance,
     maxInAmount,
     share1Price,
-    eth_1, share2Price, minOutAmount, expectRevertCustomError, subject1, share3Price
+    eth_1, share2Price, minOutAmount, expectRevertCustomError, subject1, share3Price, declineRatio
 } = require("./utils");
 const {expect} = require('chai');
 const {BN, expectEvent} = require("@openzeppelin/test-helpers");
@@ -25,7 +25,7 @@ contract('TrendsSharesV1', function (accounts) {
         trendsToken = await newToken(developer);
         trendsSharesV1 = await newSharesV1(trendsToken.address, developer);
         await trendsSharesV1.setHolderFeePercent(holderFeePercent, {from: developer});
-        await trendsSharesV1.createShares(subject0, {from: creator1});
+        await trendsSharesV1.createShares(subject0, declineRatio, {from: creator1});
 
         await trendsToken.transfer(buyer1, initBalance, {from: developer});
         await trendsToken.approve(trendsSharesV1.address, initBalance, {from: buyer1});
