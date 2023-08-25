@@ -20,12 +20,12 @@ jobs:
       - run: npm run solhint
 
   test:
-    name: truffle test
+    name: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - run: npm install
-      - run: hardhat test
+      - run: npx hardhat test
 
   coverage:
     name: coverage
