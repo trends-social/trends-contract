@@ -45,7 +45,7 @@ contract TrendsAirdrop {
 
     function claim(bytes32[] calldata proof, bytes32 chatroomId, uint256 amount) external {
         require(block.timestamp < deadline, "Claim period has ended");
-        require(trendsShare.getShares(chatroomId, msg.sender) > 0, "Must hold a share of chatroom");
+        require(trendsShare.sharesBalance(chatroomId, msg.sender) > 0, "Must hold a share of chatroom");
         require(claimedAddressesCount < MAX_CLAIMABLE_ADDRESSES, "Max claims reached");
 
         // Verify the Merkle proof
