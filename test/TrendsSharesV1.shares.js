@@ -1,6 +1,6 @@
 const {
     newToken, newSharesV1, expectRevert, expectRevertCustomError, subject0, share1Price, maxInAmount, eth_1,
-    initBalance, share2Price, share3Price, subject1, minOutAmount
+    initBalance, share2Price, share3Price, subject1, minOutAmount, declineRatio
 } = require("./utils");
 const {expect} = require('chai');
 
@@ -42,7 +42,7 @@ contract('TrendsSharesV1', function (accounts) {
     describe('create shares', function () {
         let createTxReceipt;
         beforeEach(async () => {
-            createTxReceipt = await trendsSharesV1.createShares(subject0, {from: creator1});
+            createTxReceipt = await trendsSharesV1.createShares(subject0, declineRatio, {from: creator1});
         });
         it('create shares emit event', async function () {
             expectEvent(createTxReceipt, 'Create', {
@@ -67,17 +67,25 @@ contract('TrendsSharesV1', function (accounts) {
         });
 
         it('creator can create several shares', async function () {
-            await trendsSharesV1.createShares(subject1, {from: creator1});
+            await trendsSharesV1.createShares(subject1, declineRatio, {from: creator1});
         });
 
         it('fails if shares exists', async function () {
-            await expectRevertCustomError(trendsSharesV1.createShares(subject0, {from: creator1}), "ShareCreated");
+            await expectRevertCustomError(trendsSharesV1.createShares(subject0, declineRatio, {from: creator1}), "ShareCreated");
+        });
+
+        it('fails if decline ratio is 0', async function () {
+            await expectRevert(trendsSharesV1.createShares(subject1, 0, {from: creator1}), "Division by zero");
+        });
+
+        it('fails if decline ratio is not divisible', async function () {
+            await expectRevertCustomError(trendsSharesV1.createShares(subject1, 3, {from: creator1}), "InvalidDeclineRatio");
         });
     });
 
     describe('buy shares', function () {
         beforeEach(async () => {
-            await trendsSharesV1.createShares(subject0, {from: creator1});
+            await trendsSharesV1.createShares(subject0, declineRatio, {from: creator1});
             await trendsToken.transfer(buyer1, initBalance, {from: developer});
             await trendsToken.approve(trendsSharesV1.address, initBalance, {from: buyer1});
             await trendsToken.transfer(buyer2, initBalance, {from: developer});
@@ -158,7 +166,7 @@ contract('TrendsSharesV1', function (accounts) {
 
     describe('sell shares', function () {
         beforeEach(async () => {
-            await trendsSharesV1.createShares(subject0, {from: creator1});
+            await trendsSharesV1.createShares(subject0, declineRatio, {from: creator1});
             await trendsToken.transfer(buyer1, initBalance, {from: developer});
             await trendsToken.approve(trendsSharesV1.address, initBalance, {from: buyer1});
             await trendsSharesV1.buyShares(buyer1, subject0, 1, maxInAmount, {from: buyer1});
@@ -231,7 +239,7 @@ contract('TrendsSharesV1', function (accounts) {
 
     describe('collect fees', function () {
         beforeEach(async () => {
-            await trendsSharesV1.createShares(subject0, {from: creator1});
+            await trendsSharesV1.createShares(subject0, declineRatio, {from: creator1});
             await trendsToken.transfer(buyer1, initBalance, {from: developer});
             await trendsToken.approve(trendsSharesV1.address, initBalance, {from: buyer1});
             await initFee();
@@ -301,32 +309,32 @@ contract('TrendsSharesV1', function (accounts) {
 
     describe('get price', function () {
         it('the first share price is 0', async function () {
-            let price = await trendsSharesV1.getPrice(0, 1);
+            let price = await trendsSharesV1.getPrice(0, 1, declineRatio);
             expect(price).to.be.bignumber.equal(new BN(0));
         });
 
         it('get 1-2 shares price', async function () {
-            let price = await trendsSharesV1.getPrice(1, 2);
+            let price = await trendsSharesV1.getPrice(1, 2, declineRatio);
             expect(price).to.be.bignumber.equal(share1Price.add(share2Price));
         });
 
         it('get 3-1 shares price', async function () {
-            let price = await trendsSharesV1.getPrice(3, 1);
+            let price = await trendsSharesV1.getPrice(3, 1, declineRatio);
             expect(price).to.be.bignumber.equal(share3Price);
         });
 
         it('fails if get 0-2 shares price', async function () {
-            await expectRevert(trendsSharesV1.getPrice(0, 2), "revert");
+            await expectRevert(trendsSharesV1.getPrice(0, 2, declineRatio), "revert");
         });
 
         it('get buy price', async function () {
-            await trendsSharesV1.createShares(subject0, {from: creator1});
+            await trendsSharesV1.createShares(subject0, declineRatio, {from: creator1});
             let price = await trendsSharesV1.getBuyPrice(subject0, 2);
             expect(price).to.be.bignumber.equal(share1Price.add(share2Price));
         });
 
         it('get sell price', async function () {
-            await trendsSharesV1.createShares(subject0, {from: creator1});
+            await trendsSharesV1.createShares(subject0, declineRatio, {from: creator1});
             await trendsToken.transfer(buyer1, initBalance, {from: developer});
             await trendsToken.approve(trendsSharesV1.address, initBalance, {from: buyer1});
             await trendsSharesV1.buyShares(buyer1, subject0, 2, maxInAmount, {from: buyer1});
@@ -335,14 +343,14 @@ contract('TrendsSharesV1', function (accounts) {
         });
 
         it('get buy price after fees', async function () {
-            await trendsSharesV1.createShares(subject0, {from: creator1});
+            await trendsSharesV1.createShares(subject0, declineRatio, {from: creator1});
             await initFee();
             let price = await trendsSharesV1.getBuyPriceAfterFee(subject0, 1);
             expect(price).to.be.bignumber.equal(share1Price.add(totalFees));
         });
 
         it('get sell price after fees', async function () {
-            await trendsSharesV1.createShares(subject0, {from: creator1});
+            await trendsSharesV1.createShares(subject0, declineRatio, {from: creator1});
             await trendsToken.transfer(buyer1, initBalance, {from: developer});
             await trendsToken.approve(trendsSharesV1.address, initBalance, {from: buyer1});
             await trendsSharesV1.buyShares(buyer1, subject0, 1, maxInAmount, {from: buyer1});
@@ -352,7 +360,7 @@ contract('TrendsSharesV1', function (accounts) {
         });
 
         it('get last share sell price after fees', async function () {
-            await trendsSharesV1.createShares(subject0, {from: creator1});
+            await trendsSharesV1.createShares(subject0, declineRatio, {from: creator1});
             let price = await trendsSharesV1.getSellPriceAfterFee(subject0, 1);
             expect(price).to.be.bignumber.equal(new BN(0));
         });
