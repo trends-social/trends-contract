@@ -9,6 +9,13 @@ import "./TrendsSharesV1.sol";
 contract TrendsAirdrop {
     using SafeERC20 for IERC20;
 
+    error ClaimEnded();
+    error NotShareHolder();
+    error MaxClaimsReached();
+    error InvalidProof();
+    error NoVestedAmount();
+    error NoClaimableAmount();
+
     IERC20 public trendsToken;
     bytes32 public merkleRoot;
 
@@ -20,7 +27,7 @@ contract TrendsAirdrop {
 
     // Airdrop configuration
     uint256 public deadline;
-    uint256 public constant MAX_CLAIMABLE_ADDRESSES = 5000;
+    uint256 public maxClaimableAddresses;
     uint256 public claimedAddressesCount;
 
     // Vesting structure
@@ -36,21 +43,22 @@ contract TrendsAirdrop {
     event VestingStarted(address indexed user, uint256 amount);
     event Claimed(address indexed user, uint256 amount);
 
-    constructor(TrendsSharesV1 _trendsShare, address _trendsToken, bytes32 _merkleRoot, uint256 _deadline) {
+    constructor(TrendsSharesV1 _trendsShare, address _trendsToken, bytes32 _merkleRoot, uint256 _deadline, uint256 _maxClaimableAddresses) {
         trendsToken = IERC20(_trendsToken);
         merkleRoot = _merkleRoot;
         deadline = _deadline;
         trendsShare = _trendsShare;
+        maxClaimableAddresses = _maxClaimableAddresses;
     }
 
     function claim(bytes32[] calldata proof, bytes32 chatroomId, uint256 amount) external {
-        require(block.timestamp < deadline, "Claim period has ended");
-        require(trendsShare.sharesBalance(chatroomId, msg.sender) > 0, "Must hold a share of chatroom");
-        require(claimedAddressesCount < MAX_CLAIMABLE_ADDRESSES, "Max claims reached");
+        if (block.timestamp > deadline) revert ClaimEnded();
+        if (trendsShare.sharesBalance(chatroomId, msg.sender) == 0) revert NotShareHolder();
+        if (claimedAddressesCount >= maxClaimableAddresses) revert MaxClaimsReached();
 
         // Verify the Merkle proof
         bytes32 node = keccak256(abi.encodePacked(msg.sender, amount));
-        require(MerkleProof.verify(proof, merkleRoot, node), "Invalid proof");
+        if (!MerkleProof.verify(proof, merkleRoot, node)) revert InvalidProof();
 
         // Initialize or update vesting
         Vesting storage v = vesting[msg.sender];
@@ -64,16 +72,15 @@ contract TrendsAirdrop {
 
     function claimVestedAirdrop() external {
         Vesting storage v = vesting[msg.sender];
-        require(v.amount > 0, "No vested amount");
+        if (v.amount == 0) revert NoVestedAmount();
 
         uint256 blocksSinceStart = block.number - v.startBlock;
         uint256 vestedAmount = (v.amount * blocksSinceStart) / (BLOCKS_PER_DAY * VESTING_PERIOD / 1 days);
 
         uint256 claimableAmount = vestedAmount - v.claimedAmount;
-        require(claimableAmount > 0, "No claimable amount");
+        if (claimableAmount == 0) revert NoClaimableAmount();
 
         v.claimedAmount += claimableAmount;
-
         trendsToken.safeTransfer(msg.sender, claimableAmount);
 
         emit Claimed(msg.sender, claimableAmount);
