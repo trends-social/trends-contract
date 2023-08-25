@@ -41,6 +41,8 @@ contract("TrendsAirdrop", (accounts) => {
     let user = airdrop[1].address;
     let ineligibleUser = accounts[7];
     let subject = web3.utils.sha3("chatroom1");
+    let vestingPeriod = 20;
+    let blockPerPeriod = 20;
 
     beforeEach(async () => {
         trendsToken = await newToken(developer);
@@ -51,7 +53,7 @@ contract("TrendsAirdrop", (accounts) => {
         await trendsToken.transfer(ineligibleUser, _18dc(10000), {from: developer});
         trendsSharesV1 = await TrendsSharesV1.new(trendsToken.address);
         deadline = (await web3.eth.getBlock("latest")).timestamp + 60 * 60 * 24; // 24 hours from now
-        trendsAirdrop = await TrendsAirdrop.new(trendsSharesV1.address, trendsToken.address, merkleRoot, deadline, airdrop.length / 2, subject);
+        trendsAirdrop = await TrendsAirdrop.new(trendsSharesV1.address, trendsToken.address, merkleRoot, deadline, airdrop.length / 2, subject, vestingPeriod, blockPerPeriod);
         await trendsToken.transfer(trendsAirdrop.address, _18dc(1000000), {from: developer});
     });
 
@@ -136,5 +138,32 @@ contract("TrendsAirdrop", (accounts) => {
     it("should revert if there is no vested amount for the user", async () => {
         await expectRevertCustomError(trendsAirdrop.claimVestedAirdrop({from: user}), "NoVestedAmount");
     });
+
+    it("should allow users to claim the entire vested amount, but no more than airdrop amount, after VESTING_PERIOD has ended", async () => {
+        // Claim the airdrop to set the vesting
+        let proof = merkleTree.getHexProof(allLeaves[1]);
+        await trendsSharesV1.createShares(subject, declineRatio);
+        await trendsToken.approve(trendsSharesV1.address, initBalance, { from: user });
+        await trendsSharesV1.buyShares(user, subject, 10, maxInAmount, { from: user });
+        await trendsAirdrop.claim(proof, airdrop[1].amount, { from: user });
+
+        // Get the vested amount
+        const airdropAmount = (await trendsAirdrop.vesting(user)).amount;
+
+        // Fast forward to the end of the vesting period
+        for (let i = 0; i < blockPerPeriod * vestingPeriod + 1; i++) {
+            await timeMachine.advanceBlock();
+        }
+
+        let balanceBeforeClaim = await trendsToken.balanceOf(user);
+        // Claim the vested tokens
+        await trendsAirdrop.claimVestedAirdrop({ from: user });
+        let balanceAfterClaim = await trendsToken.balanceOf(user);
+
+        // Verify the entire vested amount was claimed
+        const vestingDetails = await trendsAirdrop.vesting(user);
+        assert.equal(vestingDetails.claimedAmount.toString(), airdropAmount.toString(), "Entire vested amount should have been claimed");
+    });
+
 
 });

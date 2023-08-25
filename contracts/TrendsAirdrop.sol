@@ -17,15 +17,15 @@ contract TrendsAirdrop {
     error NoClaimableAmount();
     error OnlyClaimOnceAllowed();
 
-    IERC20 public trendsToken;
-    bytes32 public merkleRoot;
-    bytes32 public chatroomId;
+    IERC20 public immutable trendsToken;
+    bytes32 public immutable merkleRoot;
+    bytes32 public immutable chatroomId;
 
-    TrendsSharesV1 private trendsShare;
+    TrendsSharesV1 private immutable trendsShare;
 
     // Vesting configuration
-    uint256 public constant VESTING_PERIOD = 30 days;
-    uint256 public constant BLOCKS_PER_DAY = 6500; // Approximation
+    uint256 public immutable vestingPeriod;
+    uint256 public immutable blockPerPeriod; // Approximation
 
     // Airdrop configuration
     uint256 public deadline;
@@ -50,7 +50,9 @@ contract TrendsAirdrop {
         bytes32 _merkleRoot,
         uint256 _deadline,
         uint256 _maxClaimableAddresses,
-        bytes32 _chatroomId
+        bytes32 _chatroomId,
+        uint256 _vestingPeriod,
+        uint256 _blockPerPeriod
     ) {
         trendsToken = IERC20(_trendsToken);
         merkleRoot = _merkleRoot;
@@ -58,6 +60,8 @@ contract TrendsAirdrop {
         trendsShare = _trendsShare;
         maxClaimableAddresses = _maxClaimableAddresses;
         chatroomId = _chatroomId;
+        vestingPeriod = _vestingPeriod;
+        blockPerPeriod = _blockPerPeriod;
     }
 
     function claim(bytes32[] calldata proof, uint256 amount) external {
@@ -85,7 +89,7 @@ contract TrendsAirdrop {
         if (v.amount == 0) revert NoVestedAmount();
 
         uint256 blocksSinceStart = block.number - v.startBlock;
-        uint256 vestedAmount = (v.amount * blocksSinceStart) / (BLOCKS_PER_DAY * VESTING_PERIOD / 1 days);
+        uint256 vestedAmount = min(v.amount, (v.amount * blocksSinceStart) / (blockPerPeriod * vestingPeriod));
 
         uint256 claimableAmount = vestedAmount - v.claimedAmount;
         if (claimableAmount == 0) revert NoClaimableAmount();
@@ -94,5 +98,9 @@ contract TrendsAirdrop {
         trendsToken.safeTransfer(msg.sender, claimableAmount);
 
         emit Claimed(msg.sender, claimableAmount);
+    }
+
+    function min(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a >= b ? b : a;
     }
 }
