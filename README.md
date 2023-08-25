@@ -1,4 +1,5 @@
 [![Node.js CI](https://github.com/trends-social/trends-contract/actions/workflows/build.yml/badge.svg)](https://github.com/trends-social/trends-contract/actions/workflows/build.yml)
+[![codecov](https://codecov.io/gh/trends-social/trends-contract/graph/badge.svg?token=ZG6E68M7WQ)](https://codecov.io/gh/trends-social/trends-contract)
 
 # Trends Chat
 Trends Chat is a decentralized platform that harnesses the power of blockchain to empower the Web3 community. It features three core components, TrendsSharesV1, TrendsAirdrop, and TrendsToken (Layerzero standard OFT).
