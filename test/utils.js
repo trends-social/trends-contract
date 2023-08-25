@@ -17,7 +17,7 @@ const minOutAmount = new BN(0);
 const initBalance = new BN(toWei('1', 'ether'));
 
 async function newToken(account) {
-    return await TrendsToken.new('TRENDS', 'TRENDS', ZERO_ADDRESS, toWei(1000000, 'ether'), {from: account});
+    return await TrendsToken.new('TRENDS', 'TRENDS', ZERO_ADDRESS, toWei(10000000, 'ether'), {from: account});
 }
 
 async function newSharesV1(token, account) {

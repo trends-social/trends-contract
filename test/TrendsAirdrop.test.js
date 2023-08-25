@@ -3,11 +3,12 @@ const TrendsAirdrop = artifacts.require("TrendsAirdrop");
 const TrendsSharesV1 = artifacts.require("TrendsSharesV1");
 const {keccak256} = require('ethereumjs-util');
 const {utils} = require("ethers");
-require('mocha-logger');
 const {MerkleTree} = require("merkletreejs");
 const timeMachine = require('ganache-time-traveler');
 contract("TrendsAirdrop", (accounts) => {
 
+    const declineRatio = 16000;
+    
     function _18dc(_amount) {
         return (BigInt(_amount) * BigInt(10) ** BigInt(18)).toString();
     }
@@ -64,7 +65,7 @@ contract("TrendsAirdrop", (accounts) => {
     it("should allow eligible users to start vesting", async () => {
         // Call the create room and buy shares
         const subject = web3.utils.sha3("chatroom1");
-        await trendsSharesV1.createShares(subject);
+        await trendsSharesV1.createShares(subject, declineRatio);
         await trendsToken.approve(trendsSharesV1.address, initBalance, {from: user});
         await trendsSharesV1.buyShares(user, subject, 10, maxInAmount, {from: user});
 
@@ -78,7 +79,7 @@ contract("TrendsAirdrop", (accounts) => {
     it("should allow users to claim vested airdrop", async () => {
         // Call the create room and buy shares
         const subject = web3.utils.sha3("chatroom1");
-        await trendsSharesV1.createShares(subject);
+        await trendsSharesV1.createShares(subject, declineRatio);
         await trendsToken.approve(trendsSharesV1.address, initBalance, {from: user});
         await trendsSharesV1.buyShares(user, subject, 10, maxInAmount, {from: user});
 
@@ -94,7 +95,7 @@ contract("TrendsAirdrop", (accounts) => {
     it("should not allow ineligible users to claim", async () => {
         const proof = merkleTree.getHexProof(allLeaves[1]);
         const subject = web3.utils.sha3("chatroom1");
-        await trendsSharesV1.createShares(subject);
+        await trendsSharesV1.createShares(subject, declineRatio);
         await trendsToken.approve(trendsSharesV1.address, initBalance, {from: ineligibleUser});
         await trendsSharesV1.buyShares(ineligibleUser, subject, 10, maxInAmount, {from: ineligibleUser});
 
@@ -103,7 +104,7 @@ contract("TrendsAirdrop", (accounts) => {
 
     it("should not allow eligible users to claim after deadline", async () => {
         const subject = web3.utils.sha3("chatroom1");
-        await trendsSharesV1.createShares(subject);
+        await trendsSharesV1.createShares(subject, declineRatio);
         await trendsToken.approve(trendsSharesV1.address, initBalance, {from: user});
         await trendsSharesV1.buyShares(user, subject, 10, maxInAmount, {from: user});
         let proof = merkleTree.getHexProof(allLeaves[1]);
@@ -114,7 +115,7 @@ contract("TrendsAirdrop", (accounts) => {
     it("should handle reaching max claimable addresses", async () => {
         // Simulate reaching the max claimable addresses by claiming for all eligible users
         const subject = web3.utils.sha3("chatroom1");
-        await trendsSharesV1.createShares(subject);
+        await trendsSharesV1.createShares(subject, declineRatio);
 
         for (const [index, recipient] of airdrop.entries()) {
             // buy share
