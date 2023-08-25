@@ -16,6 +16,7 @@ contract TrendsSharesV1 is Ownable {
     error InsufficientShares();
     error NoRewards();
     error InvalidParams();
+    error InvalidDeclineRatio();
 
     event Create(address creator, bytes32 subject);
 
@@ -54,6 +55,9 @@ contract TrendsSharesV1 is Ownable {
     // subject => supply
     mapping(bytes32 => uint256) public sharesSupply;
 
+    // subject => decline ratio
+    mapping(bytes32 => uint24) public sharesDeclineRatio;
+
     // subject => creator
     mapping(bytes32 => address) public sharesCreator;
 
@@ -67,9 +71,11 @@ contract TrendsSharesV1 is Ownable {
         TRENDS = _trends;
     }
 
-    function createShares(bytes32 subject) external {
+    function createShares(bytes32 subject, uint24 declineRatio) external {
         if (sharesCreator[subject] != address(0)) revert ShareCreated();
         sharesCreator[subject] = msg.sender;
+        if (declineRatio * (1 ether / declineRatio) != 1 ether) revert InvalidDeclineRatio();
+        sharesDeclineRatio[subject] = declineRatio;
         emit Create(msg.sender, subject);
         _buyShares(msg.sender, subject, 1, 0);
     }
@@ -82,7 +88,7 @@ contract TrendsSharesV1 is Ownable {
         uint256 supply = sharesSupply[subject];
         if (recipient == address(0)) revert Address0();
         if (supply == 0 && sharesCreator[subject] != recipient) revert ShareNotExists();
-        uint256 price = getPrice(supply, shares);
+        uint256 price = getPrice(supply, shares, sharesDeclineRatio[subject]);
         (uint256 protocolFee, uint256 lpFarmingFee, uint256 creatorFee, uint256 holderFee) = _getFees(price);
         uint256 totalInAmount = price + protocolFee + lpFarmingFee + creatorFee + holderFee;
         if (totalInAmount > maxInAmount) revert InAmountNotEnough();
@@ -102,7 +108,7 @@ contract TrendsSharesV1 is Ownable {
         uint256 supply = sharesSupply[subject];
         if (shares >= supply) revert CannotSellLastShare();
         if (shares > sharesBalance[subject][msg.sender]) revert InsufficientShares();
-        uint256 price = getPrice(supply - shares, shares);
+        uint256 price = getPrice(supply - shares, shares, sharesDeclineRatio[subject]);
         (uint256 protocolFee, uint256 lpFarmingFee, uint256 creatorFee, uint256 holderFee) = _getFees(price);
         uint256 totalOutAmount = price - protocolFee - lpFarmingFee - creatorFee - holderFee;
         if (totalOutAmount < minOutAmount) revert OutAmountNotEnough();
@@ -118,19 +124,19 @@ contract TrendsSharesV1 is Ownable {
         }
     }
 
-    function getPrice(uint256 supply, uint256 amount) public pure returns (uint256) {
+    function getPrice(uint256 supply, uint256 amount, uint24 declineRatio) public pure returns (uint256) {
         uint256 sum1 = supply == 0 ? 0 : ((supply - 1) * (supply) * (2 * (supply - 1) + 1)) / 6;
         uint256 sum2 = supply == 0 && amount == 1 ? 0 : ((supply - 1 + amount) * (supply + amount) * (2 * (supply - 1 + amount) + 1)) / 6;
         uint256 summation = sum2 - sum1;
-        return (summation * 1 ether) / 16000;
+        return (summation * 1 ether) / declineRatio;
     }
 
     function getBuyPrice(bytes32 subject, uint256 amount) public view returns (uint256) {
-        return getPrice(sharesSupply[subject], amount);
+        return getPrice(sharesSupply[subject], amount, sharesDeclineRatio[subject]);
     }
 
     function getSellPrice(bytes32 subject, uint256 amount) public view returns (uint256) {
-        return getPrice(sharesSupply[subject] - amount, amount);
+        return getPrice(sharesSupply[subject] - amount, amount, sharesDeclineRatio[subject]);
     }
 
     function getBuyPriceAfterFee(bytes32 subject, uint256 amount) external view returns (uint256) {
