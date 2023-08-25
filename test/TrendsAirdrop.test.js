@@ -1,4 +1,4 @@
-const {newToken, merkleize, hash, maxInAmount, initBalance} = require("./utils");
+const {newToken, merkleize, hash, maxInAmount, initBalance, declineRatio} = require("./utils");
 const TrendsAirdrop = artifacts.require("TrendsAirdrop");
 const TrendsSharesV1 = artifacts.require("TrendsSharesV1");
 
@@ -37,7 +37,7 @@ contract("TrendsAirdrop", (accounts) => {
     it("should allow eligible users to start vesting", async () => {
         // Call the createShares function
         const chatroomId = web3.utils.sha3("chatroom1");
-        await trendsSharesV1.createShares(chatroomId);
+        await trendsSharesV1.createShares(chatroomId,declineRatio);
         await trendsToken.approve(trendsSharesV1.address, initBalance, {from: user1});
         await trendsSharesV1.buyShares(user1, chatroomId, 10, maxInAmount, {from: user1});
 
