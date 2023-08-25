@@ -1,8 +1,9 @@
 const {BN} = require("@openzeppelin/test-helpers");
 const {toWei} = require("web3-utils");
 const TrendsSharesV1 = artifacts.require("TrendsSharesV1");
-const TrendsToken = artifacts.require("TrendsToken");
+const TrendsToken = artifacts.require("TrendsOFT");
 const crypto = require('crypto');
+const {ZERO_ADDRESS} = require("@openzeppelin/test-helpers/src/constants");
 
 const eth_1 = new BN(toWei('1', 'ether'));
 const declineRatio = 16000;
@@ -16,7 +17,7 @@ const minOutAmount = new BN(0);
 const initBalance = new BN(toWei('1', 'ether'));
 
 async function newToken(account) {
-    return await TrendsToken.new({from: account});
+    return await TrendsToken.new('TRENDS', 'TRENDS', ZERO_ADDRESS, toWei(1000000, 'ether'), {from: account});
 }
 
 async function newSharesV1(token, account) {
