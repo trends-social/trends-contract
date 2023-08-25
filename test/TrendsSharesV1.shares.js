@@ -146,6 +146,12 @@ contract('TrendsSharesV1', function (accounts) {
             expect(await trendsSharesV1.sharesBalance(subject0, buyer2)).to.be.bignumber.equal(new BN(2));
         });
 
+        it('buyer1 can buy shares to buyer2', async function () {
+            await trendsSharesV1.buyShares(buyer2, subject0, 1, maxInAmount, {from: buyer1});
+            expect(await trendsSharesV1.sharesBalance(subject0, buyer1)).to.be.bignumber.equal(new BN(0));
+            expect(await trendsSharesV1.sharesBalance(subject0, buyer2)).to.be.bignumber.equal(new BN(1));
+        });
+
         it('fails if recipient is zero address ', async function () {
             await expectRevertCustomError(trendsSharesV1.buyShares(ZERO_ADDRESS, subject0, 1, share1Price.subn(1), {from: buyer1}), "Address0");
         });
@@ -218,6 +224,11 @@ contract('TrendsSharesV1', function (accounts) {
             expect(await trendsSharesV1.sharesBalance(subject0, buyer1)).to.be.bignumber.equal(new BN(1));
         });
 
+        it('buyer1 can sell 1 share and recipient is buyer2', async function () {
+            await trendsSharesV1.sellShares(buyer2, subject0, 1, minOutAmount, {from: buyer1});
+            expect(await trendsSharesV1.sharesBalance(subject0, buyer1)).to.be.bignumber.equal(new BN(0));
+            expect(await trendsToken.balanceOf(buyer2)).to.be.bignumber.equal(share1Price);
+        });
 
         it('fails if min out amount not enough', async function () {
             await expectRevertCustomError(trendsSharesV1.sellShares(buyer1, subject0, 1, share1Price.addn(1), {from: buyer1}), "OutAmountNotEnough");
