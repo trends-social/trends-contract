@@ -15,9 +15,11 @@ contract TrendsAirdrop {
     error InvalidProof();
     error NoVestedAmount();
     error NoClaimableAmount();
+    error OnlyClaimOnceAllowed();
 
     IERC20 public trendsToken;
     bytes32 public merkleRoot;
+    bytes32 public chatroomId;
 
     TrendsSharesV1 private trendsShare;
 
@@ -43,15 +45,22 @@ contract TrendsAirdrop {
     event VestingStarted(address indexed user, uint256 amount);
     event Claimed(address indexed user, uint256 amount);
 
-    constructor(TrendsSharesV1 _trendsShare, address _trendsToken, bytes32 _merkleRoot, uint256 _deadline, uint256 _maxClaimableAddresses) {
+    constructor(TrendsSharesV1 _trendsShare,
+        address _trendsToken,
+        bytes32 _merkleRoot,
+        uint256 _deadline,
+        uint256 _maxClaimableAddresses,
+        bytes32 _chatroomId
+    ) {
         trendsToken = IERC20(_trendsToken);
         merkleRoot = _merkleRoot;
         deadline = _deadline;
         trendsShare = _trendsShare;
         maxClaimableAddresses = _maxClaimableAddresses;
+        chatroomId = _chatroomId;
     }
 
-    function claim(bytes32[] calldata proof, bytes32 chatroomId, uint256 amount) external {
+    function claim(bytes32[] calldata proof, uint256 amount) external {
         if (block.timestamp > deadline) revert ClaimEnded();
         if (trendsShare.sharesBalance(chatroomId, msg.sender) == 0) revert NotShareHolder();
         if (claimedAddressesCount >= maxClaimableAddresses) revert MaxClaimsReached();
@@ -62,7 +71,8 @@ contract TrendsAirdrop {
 
         // Initialize or update vesting
         Vesting storage v = vesting[msg.sender];
-        v.amount += amount;
+        if (v.amount != 0) revert OnlyClaimOnceAllowed();
+        v.amount = amount;
         v.startBlock = block.number;
 
         claimedAddressesCount++;
