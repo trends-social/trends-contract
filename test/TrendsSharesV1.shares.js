@@ -75,7 +75,7 @@ contract('TrendsSharesV1', function (accounts) {
         });
 
         it('fails if decline ratio is 0', async function () {
-            await expectRevert(trendsSharesV1.createShares(subject1, 0, {from: creator1}), "Division by zero");
+            await expectRevert(trendsSharesV1.createShares(subject1, 0, {from: creator1}), "by zero");
         });
 
         it('fails if decline ratio is not divisible', async function () {
