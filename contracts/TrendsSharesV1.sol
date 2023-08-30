@@ -23,7 +23,7 @@ contract TrendsSharesV1 is Ownable {
     event Trade(
         address trader,
         bytes32 subject,
-        bool isBuy,
+        bool    isBuy,
         uint256 shares,
         uint256 price,
         uint256 protocolFee,
