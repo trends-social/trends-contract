@@ -5,7 +5,6 @@ import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProo
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {TrendsSharesV1} from "./TrendsSharesV1.sol";
 
-
 contract TrendsAirdrop {
     using SafeERC20 for IERC20;
 
@@ -45,7 +44,8 @@ contract TrendsAirdrop {
     event VestingStarted(address indexed user, uint256 amount);
     event Claimed(address indexed user, uint256 amount);
 
-    constructor(TrendsSharesV1 _trendsShare,
+    constructor(
+        TrendsSharesV1 _trendsShare,
         address _trendsToken,
         bytes32 _merkleRoot,
         uint256 _deadline,
@@ -83,7 +83,6 @@ contract TrendsAirdrop {
 
         emit VestingStarted(msg.sender, amount);
     }
-
 
     function claimVestedAirdrop() external {
         Vesting storage v = vesting[msg.sender];

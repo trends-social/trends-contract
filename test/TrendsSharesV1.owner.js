@@ -26,25 +26,12 @@ contract('TrendsSharesV1', function (accounts) {
         await expectRevert(trendsSharesV1.setProtocolFeeDestination(acc1, {from: acc1}), onlyOwnerError);
     });
 
-    it('set lpFarming address only owner', async function () {
-        await trendsSharesV1.setLpFarmingAddress(acc1, {from: developer});
-        expect(await trendsSharesV1.lpFarmingAddress()).to.eq(acc1);
-        await expectRevert(trendsSharesV1.setLpFarmingAddress(acc1, {from: acc1}), onlyOwnerError);
-    });
-
     it('set protocol fee percent only owner', async function () {
         await trendsSharesV1.setProtocolFeePercent(1, {from: developer});
         expect(await trendsSharesV1.protocolFeePercent()).to.be.bignumber.equal(new BN(1));
         await expectRevert(trendsSharesV1.setProtocolFeePercent(1, {from: acc1}), onlyOwnerError);
         await expectRevertCustomError(trendsSharesV1.setProtocolFeePercent(eth_1, {from: developer}), invalidFeeError);
 
-    });
-
-    it('set lpFarming fee percent only owner', async function () {
-        await trendsSharesV1.setLpFarmingFeePercent(1, {from: developer});
-        expect(await trendsSharesV1.lpFarmingFeePercent()).to.be.bignumber.equal(new BN(1));
-        await expectRevert(trendsSharesV1.setLpFarmingFeePercent(1, {from: acc1}), onlyOwnerError);
-        await expectRevertCustomError(trendsSharesV1.setLpFarmingFeePercent(eth_1, {from: developer}), invalidFeeError);
     });
 
     it('set holder fee percent only owner', async function () {
