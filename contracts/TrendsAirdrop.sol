@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.17;
 
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
@@ -83,6 +83,7 @@ contract TrendsAirdrop {
 
         emit VestingStarted(msg.sender, amount);
     }
+
 
     function claimVestedAirdrop() external {
         Vesting storage v = vesting[msg.sender];

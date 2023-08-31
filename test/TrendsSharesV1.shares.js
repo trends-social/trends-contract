@@ -356,7 +356,7 @@ contract('TrendsSharesV1', function (accounts) {
         it('get buy price after fees', async function () {
             await trendsSharesV1.createShares(subject0, declineRatio, {from: creator1});
             await initFee();
-            let price = await trendsSharesV1.getBuyPriceAfterFee(subject0, 1);
+            let price = await trendsSharesV1.getBuyPriceWithFees(subject0, 1);
             expect(price).to.be.bignumber.equal(share1Price.add(totalFees));
         });
 
@@ -366,13 +366,13 @@ contract('TrendsSharesV1', function (accounts) {
             await trendsToken.approve(trendsSharesV1.address, initBalance, {from: buyer1});
             await trendsSharesV1.buyShares(buyer1, subject0, 1, maxInAmount, {from: buyer1});
             await initFee();
-            let price = await trendsSharesV1.getSellPriceAfterFee(subject0, 1);
+            let price = await trendsSharesV1.getSellPriceWithFees(subject0, 1);
             expect(price).to.be.bignumber.equal(share1Price.sub(totalFees));
         });
 
         it('get last share sell price after fees', async function () {
             await trendsSharesV1.createShares(subject0, declineRatio, {from: creator1});
-            let price = await trendsSharesV1.getSellPriceAfterFee(subject0, 1);
+            let price = await trendsSharesV1.getSellPriceWithFees(subject0, 1);
             expect(price).to.be.bignumber.equal(new BN(0));
         });
     });
