@@ -63,6 +63,12 @@ contract('TrendsSharesV1', function (accounts) {
                     share2Price.mul(holderFeePercent).div(eth_1).divn(2)));
         });
 
+        it('reward increases after buyer1 buy shares the second times', async function () {
+            await trendsSharesV1.buyShares(buyer1, subject0, 1, maxInAmount, {from: buyer1});
+            await trendsSharesV1.buyShares(buyer1, subject0, 2, maxInAmount, {from: buyer1});
+            expect(await trendsSharesV1.getReward(subject0, buyer1)).to.be.bignumber.equal(share2Price.add(share3Price).mul(holderFeePercent).div(eth_1).divn(2));
+        });
+
         it('reward increases after sell shares', async function () {
             await trendsSharesV1.buyShares(buyer1, subject0, 1, maxInAmount, {from: buyer1});
             await trendsSharesV1.buyShares(buyer2, subject0, 1, maxInAmount, {from: buyer2});

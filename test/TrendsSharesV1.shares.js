@@ -13,14 +13,12 @@ const {ZERO_ADDRESS} = require("@openzeppelin/test-helpers/src/constants");
 
 
 const protocolFeePercent = new BN(toWei('1', 'ether')).divn(100);
-const lpFarmingFeePercent = new BN(toWei('2', 'ether')).divn(100);
 const holderFeePercent = new BN(toWei('4', 'ether')).divn(100);
 const creatorFeePercent = new BN(toWei('8', 'ether')).divn(100);
 const protocolFee = share1Price.mul(protocolFeePercent).div(eth_1);
-const lpFarmingFee = share1Price.mul(lpFarmingFeePercent).div(eth_1);
 const creatorFee = share1Price.mul(creatorFeePercent).div(eth_1);
 const holderFee = share1Price.mul(holderFeePercent).div(eth_1);
-const totalFees = protocolFee.add(lpFarmingFee).add(creatorFee).add(holderFee);
+const totalFees = protocolFee.add(creatorFee).add(holderFee);
 
 let trendsToken;
 let trendsSharesV1;
@@ -55,7 +53,6 @@ contract('TrendsSharesV1', function (accounts) {
                 shares: new BN(1),
                 price: new BN(0),
                 protocolFee: new BN(0),
-                lpFarmingFee: new BN(0),
                 creatorFee: new BN(0),
                 holderFee: new BN(0),
                 supply: new BN(1)
@@ -101,7 +98,6 @@ contract('TrendsSharesV1', function (accounts) {
                 shares: new BN(1),
                 price: share1Price,
                 protocolFee: new BN(0),
-                lpFarmingFee: new BN(0),
                 creatorFee: new BN(0),
                 holderFee: new BN(0),
                 supply: new BN(2)
@@ -187,7 +183,6 @@ contract('TrendsSharesV1', function (accounts) {
                 shares: new BN(1),
                 price: share1Price,
                 protocolFee: new BN(0),
-                lpFarmingFee: new BN(0),
                 creatorFee: new BN(0),
                 holderFee: new BN(0),
                 supply: new BN(1)
@@ -265,7 +260,6 @@ contract('TrendsSharesV1', function (accounts) {
                 shares: new BN(1),
                 price: share1Price,
                 protocolFee: share1Price.mul(protocolFeePercent).div(eth_1),
-                lpFarmingFee: share1Price.mul(lpFarmingFeePercent).div(eth_1),
                 creatorFee: share1Price.mul(creatorFeePercent).div(eth_1),
                 holderFee: share1Price.mul(holderFeePercent).div(eth_1),
                 supply: new BN(2)
@@ -275,7 +269,7 @@ contract('TrendsSharesV1', function (accounts) {
         it('distribute fees correct after buy shares', async function () {
             await trendsSharesV1.buyShares(buyer1, subject0, 1, maxInAmount, {from: buyer1});
             expect(await trendsToken.balanceOf(protocolFeeDestination)).to.be.bignumber.equal(protocolFee);
-            expect(await trendsToken.balanceOf(trendsSharesV1.address)).to.be.bignumber.equal(share1Price.add(lpFarmingFee).add(holderFee));
+            expect(await trendsToken.balanceOf(trendsSharesV1.address)).to.be.bignumber.equal(share1Price.add(holderFee));
             expect(await trendsToken.balanceOf(creator1)).to.be.bignumber.equal(creatorFee);
         });
 
@@ -296,7 +290,6 @@ contract('TrendsSharesV1', function (accounts) {
                 shares: new BN(1),
                 price: share1Price,
                 protocolFee: share1Price.mul(protocolFeePercent).div(eth_1),
-                lpFarmingFee: share1Price.mul(lpFarmingFeePercent).div(eth_1),
                 creatorFee: share1Price.mul(creatorFeePercent).div(eth_1),
                 holderFee: share1Price.mul(holderFeePercent).div(eth_1),
                 supply: new BN(1)
@@ -307,7 +300,7 @@ contract('TrendsSharesV1', function (accounts) {
             await trendsSharesV1.buyShares(buyer1, subject0, 1, maxInAmount, {from: buyer1});
             await trendsSharesV1.sellShares(buyer1, subject0, 1, minOutAmount, {from: buyer1});
             expect(await trendsToken.balanceOf(protocolFeeDestination)).to.be.bignumber.equal(protocolFee.muln(2));
-            expect(await trendsToken.balanceOf(trendsSharesV1.address)).to.be.bignumber.equal((lpFarmingFee.add(holderFee)).muln(2));
+            expect(await trendsToken.balanceOf(trendsSharesV1.address)).to.be.bignumber.equal((holderFee).muln(2));
             expect(await trendsToken.balanceOf(buyer1)).to.be.bignumber.equal(initBalance.sub(totalFees.muln(2)));
         });
 
@@ -382,9 +375,7 @@ contract('TrendsSharesV1', function (accounts) {
 
 async function initFee() {
     await trendsSharesV1.setProtocolFeeDestination(protocolFeeDestination, {from: developer});
-    await trendsSharesV1.setLpFarmingAddress(lpFarmingAddress, {from: developer});
     await trendsSharesV1.setProtocolFeePercent(protocolFeePercent, {from: developer});
-    await trendsSharesV1.setLpFarmingFeePercent(lpFarmingFeePercent, {from: developer});
     await trendsSharesV1.setHolderFeePercent(holderFeePercent, {from: developer});
     await trendsSharesV1.setCreatorFeePercent(creatorFeePercent, {from: developer});
 }

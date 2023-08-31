@@ -23,11 +23,10 @@ contract TrendsSharesV1 is Ownable {
     event Trade(
         address trader,
         bytes32 subject,
-        bool    isBuy,
+        bool isBuy,
         uint256 shares,
         uint256 price,
         uint256 protocolFee,
-        uint256 lpFarmingFee,
         uint256 creatorFee,
         uint256 holderFee,
         uint256 supply
@@ -42,10 +41,8 @@ contract TrendsSharesV1 is Ownable {
 
     IERC20 public immutable TRENDS;
     address public protocolFeeDestination;
-    address public lpFarmingAddress;
 
     uint256 public protocolFeePercent;
-    uint256 public lpFarmingFeePercent;
     uint256 public creatorFeePercent;
     uint256 public holderFeePercent;
 
@@ -74,7 +71,8 @@ contract TrendsSharesV1 is Ownable {
     function createShares(bytes32 subject, uint24 declineRatio) external {
         if (sharesCreator[subject] != address(0)) revert ShareCreated();
         sharesCreator[subject] = msg.sender;
-        if (declineRatio * (1 ether / declineRatio) != 1 ether) revert InvalidDeclineRatio(); // Make sure declineRatio is fully divided in calculation later
+        if (declineRatio * (1 ether / declineRatio) != 1 ether) revert InvalidDeclineRatio();
+        // Make sure declineRatio is fully divided in calculation later
         sharesDeclineRatio[subject] = declineRatio;
         emit Create(msg.sender, subject);
         _buyShares(msg.sender, subject, 1, 0);
@@ -90,18 +88,18 @@ contract TrendsSharesV1 is Ownable {
         if (recipient == address(0)) revert Address0();
         if (supply == 0 && sharesCreator[subject] != recipient) revert ShareNotExists();
         uint256 price = getPrice(supply, shares, sharesDeclineRatio[subject]);
-        (uint256 protocolFee, uint256 lpFarmingFee, uint256 creatorFee, uint256 holderFee) = _getFees(price);
-        uint256 totalInAmount = price + protocolFee + lpFarmingFee + creatorFee + holderFee;
+        (uint256 protocolFee, uint256 creatorFee, uint256 holderFee) = _getFees(price);
+        uint256 totalInAmount = price + protocolFee + creatorFee + holderFee;
         if (totalInAmount > maxInAmount) revert InAmountNotEnough();
         //update shares reward
         _updateSharesReward(subject, holderFee, recipient);
-        sharesBalance[subject][recipient] = sharesBalance[subject][recipient] + shares;
+        sharesBalance[subject][recipient] += shares;
         uint256 totalSupply = supply + shares;
         sharesSupply[subject] = totalSupply;
-        emit Trade(recipient, subject, true, shares, price, protocolFee, lpFarmingFee, creatorFee, holderFee, totalSupply);
+        emit Trade(recipient, subject, true, shares, price, protocolFee, creatorFee, holderFee, totalSupply);
         if (price > 0) {
             TRENDS.safeTransferFrom(msg.sender, address(this), totalInAmount);
-            _collectFees(subject, protocolFee, lpFarmingFee, creatorFee);
+            _collectFees(subject, protocolFee, creatorFee);
         }
     }
 
@@ -110,18 +108,18 @@ contract TrendsSharesV1 is Ownable {
         if (shares >= supply) revert CannotSellLastShare();
         if (shares > sharesBalance[subject][msg.sender]) revert InsufficientShares();
         uint256 price = getPrice(supply - shares, shares, sharesDeclineRatio[subject]);
-        (uint256 protocolFee, uint256 lpFarmingFee, uint256 creatorFee, uint256 holderFee) = _getFees(price);
-        uint256 totalOutAmount = price - protocolFee - lpFarmingFee - creatorFee - holderFee;
+        (uint256 protocolFee, uint256 creatorFee, uint256 holderFee) = _getFees(price);
+        uint256 totalOutAmount = price - protocolFee - creatorFee - holderFee;
         if (totalOutAmount < minOutAmount) revert OutAmountNotEnough();
         //update shares reward
         _updateSharesReward(subject, holderFee, msg.sender);
-        sharesBalance[subject][msg.sender] = sharesBalance[subject][msg.sender] - shares;
+        sharesBalance[subject][msg.sender] -= shares;
         uint256 totalSupply = supply - shares;
         sharesSupply[subject] = totalSupply;
-        emit Trade(msg.sender, subject, false, shares, price, protocolFee, lpFarmingFee, creatorFee, holderFee, totalSupply);
+        emit Trade(msg.sender, subject, false, shares, price, protocolFee, creatorFee, holderFee, totalSupply);
         if (price > 0) {
             TRENDS.safeTransfer(recipient, totalOutAmount);
-            _collectFees(subject, protocolFee, lpFarmingFee, creatorFee);
+            _collectFees(subject, protocolFee, creatorFee);
         }
     }
 
@@ -142,29 +140,25 @@ contract TrendsSharesV1 is Ownable {
 
     function getBuyPriceWithFees(bytes32 subject, uint256 amount) external view returns (uint256) {
         uint256 price = getBuyPrice(subject, amount);
-        (uint256 protocolFee, uint256 lpFarmingFee, uint256 creatorFee, uint256 holderFee) = _getFees(price);
-        return price + protocolFee + lpFarmingFee + creatorFee + holderFee;
+        (uint256 protocolFee, uint256 creatorFee, uint256 holderFee) = _getFees(price);
+        return price + protocolFee + creatorFee + holderFee;
     }
 
     function getSellPriceWithFees(bytes32 subject, uint256 amount) external view returns (uint256) {
         uint256 price = getSellPrice(subject, amount);
-        (uint256 protocolFee, uint256 lpFarmingFee, uint256 creatorFee, uint256 holderFee) = _getFees(price);
-        return price - protocolFee - lpFarmingFee - creatorFee - holderFee;
+        (uint256 protocolFee, uint256 creatorFee, uint256 holderFee) = _getFees(price);
+        return price - protocolFee - creatorFee - holderFee;
     }
 
-    function _getFees(uint256 price) internal view returns (uint256 protocolFee, uint256 lpFarmingFee, uint256 creatorFee, uint256 holderFee) {
+    function _getFees(uint256 price) internal view returns (uint256 protocolFee, uint256 creatorFee, uint256 holderFee) {
         protocolFee = (price * protocolFeePercent) / 1 ether;
-        lpFarmingFee = (price * lpFarmingFeePercent) / 1 ether;
         creatorFee = (price * creatorFeePercent) / 1 ether;
         holderFee = (price * holderFeePercent) / 1 ether;
     }
 
-    function _collectFees(bytes32 subject, uint256 protocolFee, uint256 lpFarmingFee, uint256 creatorFee) internal {
+    function _collectFees(bytes32 subject, uint256 protocolFee, uint256 creatorFee) internal {
         if (protocolFee > 0) {
             TRENDS.safeTransfer(protocolFeeDestination, protocolFee);
-        }
-        if (lpFarmingFee > 0) {
-            //TODO
         }
         if (creatorFee > 0) {
             TRENDS.safeTransfer(sharesCreator[subject], creatorFee);
@@ -188,7 +182,7 @@ contract TrendsSharesV1 is Ownable {
         if (newReward == 0 || sharesSupply[subject] == 0) {
             return;
         }
-        rewardPerShareStored[subject] += newReward * (1 ether) / sharesSupply[subject];
+        rewardPerShareStored[subject] += (newReward * (1 ether)) / sharesSupply[subject];
         _updateHolderReward(subject, holder);
     }
 
@@ -209,18 +203,9 @@ contract TrendsSharesV1 is Ownable {
         protocolFeeDestination = _protocolFeeDestination;
     }
 
-    function setLpFarmingAddress(address _lpFarmingAddress) external onlyOwner {
-        lpFarmingAddress = _lpFarmingAddress;
-    }
-
     function setProtocolFeePercent(uint256 _protocolFeePercent) external onlyOwner {
         if (_protocolFeePercent >= 1 ether) revert InvalidParams();
         protocolFeePercent = _protocolFeePercent;
-    }
-
-    function setLpFarmingFeePercent(uint256 _lpFarmingFeePercent) external onlyOwner {
-        if (_lpFarmingFeePercent >= 1 ether) revert InvalidParams();
-        lpFarmingFeePercent = _lpFarmingFeePercent;
     }
 
     function setCreatorFeePercent(uint256 _creatorFeePercent) external onlyOwner {
