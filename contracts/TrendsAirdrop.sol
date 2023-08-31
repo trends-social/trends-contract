@@ -9,8 +9,7 @@ contract TrendsAirdrop {
     using SafeERC20 for IERC20;
 
     error ClaimEnded();
-    error NotShareHolder();
-    error MaxClaimsReached();
+    error NotCreator();
     error InvalidProof();
     error NoVestedAmount();
     error NoClaimableAmount();
@@ -18,7 +17,6 @@ contract TrendsAirdrop {
 
     IERC20 public immutable trendsToken;
     bytes32 public immutable merkleRoot;
-    bytes32 public immutable chatroomId;
 
     TrendsSharesV1 private immutable trendsShare;
 
@@ -27,9 +25,8 @@ contract TrendsAirdrop {
     uint256 public immutable blockPerPeriod; // Approximation
 
     // Airdrop configuration
-    uint256 public deadline;
-    uint256 public maxClaimableAddresses;
-    uint256 public claimedAddressesCount;
+    uint256 public claimed;
+    uint256 public maxToClaim;
 
     // Vesting structure
     struct Vesting {
@@ -48,26 +45,21 @@ contract TrendsAirdrop {
         TrendsSharesV1 _trendsShare,
         address _trendsToken,
         bytes32 _merkleRoot,
-        uint256 _deadline,
-        uint256 _maxClaimableAddresses,
-        bytes32 _chatroomId,
+        uint256 _maxToClaim,
         uint256 _vestingPeriod,
         uint256 _blockPerPeriod
     ) {
         trendsToken = IERC20(_trendsToken);
         merkleRoot = _merkleRoot;
-        deadline = _deadline;
         trendsShare = _trendsShare;
-        maxClaimableAddresses = _maxClaimableAddresses;
-        chatroomId = _chatroomId;
+        maxToClaim = _maxToClaim;
         vestingPeriod = _vestingPeriod;
         blockPerPeriod = _blockPerPeriod;
     }
 
-    function claim(bytes32[] calldata proof, uint256 amount) external {
-        if (block.timestamp > deadline) revert ClaimEnded();
-        if (trendsShare.sharesBalance(chatroomId, msg.sender) == 0) revert NotShareHolder();
-        if (claimedAddressesCount >= maxClaimableAddresses) revert MaxClaimsReached();
+    function claim(bytes32[] calldata proof, uint256 amount, bytes32 subject) external {
+        if (claimed >= maxToClaim) revert ClaimEnded();
+        if (trendsShare.sharesCreator(subject) == address(0)) revert NotCreator();
 
         // Verify the Merkle proof
         bytes32 node = keccak256(abi.encodePacked(msg.sender, amount));
@@ -76,12 +68,25 @@ contract TrendsAirdrop {
         // Initialize or update vesting
         Vesting storage v = vesting[msg.sender];
         if (v.amount != 0) revert OnlyClaimOnceAllowed();
+
+        // Claim the rest if reaching maxToClaim
+        if (amount + claimed > maxToClaim) {
+            amount = maxToClaim - claimed;
+        }
         v.amount = amount;
         v.startBlock = block.number;
 
-        claimedAddressesCount++;
+        claimed += amount;
 
         emit VestingStarted(msg.sender, amount);
+    }
+
+    function claimable(address recipient) external view returns (uint256) {
+        Vesting memory v = vesting[recipient];
+        if (v.amount == 0) return 0;
+        uint256 blocksSinceStart = block.number - v.startBlock;
+        uint256 vestedAmount = min(v.amount, (v.amount * blocksSinceStart) / (blockPerPeriod * vestingPeriod));
+        return vestedAmount - v.claimedAmount;
     }
 
     function claimVestedAirdrop() external {
