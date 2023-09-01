@@ -52,7 +52,7 @@ contract TrendsAirdrop {
 
     function claim(bytes32[] calldata proof, uint256 amount, bytes32 subject) external {
         if (claimed >= maxToClaim) revert ClaimEnded();
-        if (trendsShare.sharesCreator(subject) == address(0)) revert NotCreator();
+        if (trendsShare.sharesCreator(subject) != msg.sender) revert NotCreator();
 
         // Verify the Merkle proof
         bytes32 node = keccak256(abi.encodePacked(msg.sender, amount));

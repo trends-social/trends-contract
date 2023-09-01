@@ -16,7 +16,7 @@ const subject1 = "0x010000000000000000000000000000000000000000000000000000000000
 const maxInAmount = new BN(toWei('100', 'ether'));
 const minOutAmount = new BN(0);
 const initBalance = new BN(toWei('1', 'ether'));
-const createSubjectFee = eth_1.divn(1500);
+const createSharesEthFee = eth_1.divn(1500);
 
 async function newToken(account) {
     return await TrendsToken.new('TRENDS', 'TRENDS', ZERO_ADDRESS, toWei(10000000, 'ether'), {from: account});
@@ -83,5 +83,5 @@ module.exports = {
     initBalance,
     merkleize,
     hash,
-    createSubjectFee
+    createSharesEthFee
 };
