@@ -8,6 +8,8 @@ contract TrendsSharesV1 is Ownable {
     using SafeERC20 for IERC20;
 
     error ShareCreated();
+    error InsufficientEth();
+    error UnableSendDevFund();
     error ShareNotExists();
     error Address0();
     error InAmountNotEnough();
@@ -18,7 +20,7 @@ contract TrendsSharesV1 is Ownable {
     error InvalidParams();
     error InvalidDeclineRatio();
 
-    event Create(address creator, bytes32 subject);
+    event Create(address creator, bytes32 subject, uint256 ethFee);
 
     event Trade(
         address trader,
@@ -41,10 +43,13 @@ contract TrendsSharesV1 is Ownable {
 
     IERC20 public immutable TRENDS;
     address public protocolFeeDestination;
+    address public devFundDestination;
 
     uint256 public protocolFeePercent;
     uint256 public creatorFeePercent;
     uint256 public holderFeePercent;
+
+    uint256 public createSharesEthFee = 1 ether / uint256(1500);
 
     // subject => (holder => balance)
     mapping(bytes32 => mapping(address => uint256)) public sharesBalance;
@@ -68,14 +73,17 @@ contract TrendsSharesV1 is Ownable {
         TRENDS = _trends;
     }
 
-    function createShares(bytes32 subject, uint24 declineRatio) external {
+    function createShares(bytes32 subject, uint24 declineRatio) external payable {
         if (sharesCreator[subject] != address(0)) revert ShareCreated();
+        if (msg.value < createSharesEthFee) revert InsufficientEth();
         sharesCreator[subject] = msg.sender;
         if (declineRatio * (1 ether / declineRatio) != 1 ether) revert InvalidDeclineRatio();
         // Make sure declineRatio is fully divided in calculation later
         sharesDeclineRatio[subject] = declineRatio;
-        emit Create(msg.sender, subject);
+        emit Create(msg.sender, subject, msg.value);
         _buyShares(msg.sender, subject, 1, 0);
+        (bool success, ) = devFundDestination.call{value: msg.value}("");
+        if (!success) revert UnableSendDevFund();
     }
 
     function buyShares(address recipient, bytes32 subject, uint256 shares, uint256 maxInAmount) external {
@@ -201,6 +209,14 @@ contract TrendsSharesV1 is Ownable {
 
     function setProtocolFeeDestination(address _protocolFeeDestination) external onlyOwner {
         protocolFeeDestination = _protocolFeeDestination;
+    }
+
+    function setDevFundDestination(address _devFundDestination) external onlyOwner {
+        devFundDestination = _devFundDestination;
+    }
+
+    function setCreateSharesEthFee(uint256 _createSharesEthFee) external onlyOwner {
+        createSharesEthFee = _createSharesEthFee;
     }
 
     function setProtocolFeePercent(uint256 _protocolFeePercent) external onlyOwner {

@@ -10,11 +10,13 @@ const declineRatio = 16000;
 const share1Price = new BN("1").pow(new BN("2")).mul(new BN(toWei(1, 'ether'))).divn(declineRatio);
 const share2Price = new BN("2").pow(new BN("2")).mul(new BN(toWei(1, 'ether'))).divn(declineRatio);
 const share3Price = new BN("3").pow(new BN("2")).mul(new BN(toWei(1, 'ether'))).divn(declineRatio);
+
 const subject0 = "0x0000000000000000000000000000000000000000000000000000000000000000";
 const subject1 = "0x0100000000000000000000000000000000000000000000000000000000000000";
 const maxInAmount = new BN(toWei('100', 'ether'));
 const minOutAmount = new BN(0);
 const initBalance = new BN(toWei('1', 'ether'));
+const createSubjectFee = eth_1.divn(1500);
 
 async function newToken(account) {
     return await TrendsToken.new('TRENDS', 'TRENDS', ZERO_ADDRESS, toWei(10000000, 'ether'), {from: account});
@@ -80,5 +82,6 @@ module.exports = {
     minOutAmount,
     initBalance,
     merkleize,
-    hash
+    hash,
+    createSubjectFee
 };
