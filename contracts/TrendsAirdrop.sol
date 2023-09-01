@@ -41,14 +41,7 @@ contract TrendsAirdrop {
     event VestingStarted(address indexed user, uint256 amount);
     event Claimed(address indexed user, uint256 amount);
 
-    constructor(
-        TrendsSharesV1 _trendsShare,
-        address _trendsToken,
-        bytes32 _merkleRoot,
-        uint256 _maxToClaim,
-        uint256 _vestingPeriod,
-        uint256 _blockPerPeriod
-    ) {
+    constructor(TrendsSharesV1 _trendsShare, address _trendsToken, bytes32 _merkleRoot, uint256 _maxToClaim, uint256 _vestingPeriod, uint256 _blockPerPeriod) {
         trendsToken = IERC20(_trendsToken);
         merkleRoot = _merkleRoot;
         trendsShare = _trendsShare;

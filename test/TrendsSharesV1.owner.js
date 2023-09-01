@@ -26,6 +26,12 @@ contract('TrendsSharesV1', function (accounts) {
         await expectRevert(trendsSharesV1.setProtocolFeeDestination(acc1, {from: acc1}), onlyOwnerError);
     });
 
+    it('set dev fund destination only owner', async function () {
+        await trendsSharesV1.setDevFundDestination(acc1, {from: developer});
+        expect(await trendsSharesV1.devFundDestination()).to.eq(acc1);
+        await expectRevert(trendsSharesV1.setDevFundDestination(acc1, {from: acc1}), onlyOwnerError);
+    });
+
     it('set protocol fee percent only owner', async function () {
         await trendsSharesV1.setProtocolFeePercent(1, {from: developer});
         expect(await trendsSharesV1.protocolFeePercent()).to.be.bignumber.equal(new BN(1));
@@ -47,4 +53,11 @@ contract('TrendsSharesV1', function (accounts) {
         await expectRevert(trendsSharesV1.setCreatorFeePercent(1, {from: acc1}), onlyOwnerError);
         await expectRevertCustomError(trendsSharesV1.setCreatorFeePercent(eth_1, {from: developer}), invalidFeeError);
     });
+
+    it('set create subject eth fee only owner', async function () {
+        await trendsSharesV1.setCreateSharesEthFee(1, {from: developer});
+        expect(await trendsSharesV1.createSharesEthFee()).to.be.bignumber.equal(new BN(1));
+        await expectRevert(trendsSharesV1.setCreateSharesEthFee(1, {from: acc1}), onlyOwnerError);
+    });
+
 });

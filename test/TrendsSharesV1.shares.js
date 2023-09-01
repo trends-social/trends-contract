@@ -1,6 +1,6 @@
 const {
     newToken, newSharesV1, expectRevert, expectRevertCustomError, subject0, share1Price, maxInAmount, eth_1,
-    initBalance, share2Price, share3Price, subject1, minOutAmount, declineRatio
+    initBalance, share2Price, share3Price, subject1, minOutAmount, declineRatio, createSubjectFee
 } = require("./utils");
 const {expect} = require('chai');
 
@@ -10,6 +10,7 @@ const {
 } = require('@openzeppelin/test-helpers');
 const {toWei} = require("web3-utils");
 const {ZERO_ADDRESS} = require("@openzeppelin/test-helpers/src/constants");
+const {web3} = require("hardhat");
 
 
 const protocolFeePercent = new BN(toWei('1', 'ether')).divn(100);
@@ -23,7 +24,7 @@ const totalFees = protocolFee.add(creatorFee).add(holderFee);
 let trendsToken;
 let trendsSharesV1;
 let protocolFeeDestination;
-let lpFarmingAddress;
+let devFund;
 let developer;
 contract('TrendsSharesV1', function (accounts) {
     developer = accounts[0];
@@ -32,7 +33,7 @@ contract('TrendsSharesV1', function (accounts) {
     let buyer2 = accounts[4];
     let buyer3 = accounts[7];
     protocolFeeDestination = accounts[5];
-    lpFarmingAddress = accounts[6];
+    devFund = accounts[6];
     beforeEach(async () => {
         trendsToken = await newToken(developer);
         trendsSharesV1 = await newSharesV1(trendsToken.address, developer);
@@ -40,11 +41,14 @@ contract('TrendsSharesV1', function (accounts) {
     describe('create shares', function () {
         let createTxReceipt;
         beforeEach(async () => {
-            createTxReceipt = await trendsSharesV1.createShares(subject0, declineRatio, {from: creator1});
+            createTxReceipt = await trendsSharesV1.createShares(subject0, declineRatio, {
+                from: creator1,
+                value: createSubjectFee
+            });
         });
         it('create shares emit event', async function () {
             expectEvent(createTxReceipt, 'Create', {
-                creator: creator1, subject: subject0
+                creator: creator1, subject: subject0, ethFee: createSubjectFee
             });
             expectEvent(createTxReceipt, 'Trade', {
                 trader: creator1,
@@ -58,31 +62,67 @@ contract('TrendsSharesV1', function (accounts) {
                 supply: new BN(1)
             });
         });
+
+        it('create shares fees to dev fund', async function () {
+            await trendsSharesV1.setDevFundDestination(devFund, {from: developer});
+            let devFundBalance = await web3.eth.getBalance(devFund);
+            await trendsSharesV1.createShares(subject1, declineRatio, {
+                from: creator1,
+                value: createSubjectFee
+            });
+            expect(await web3.eth.getBalance(devFund)).to.be.bignumber.equal(createSubjectFee.add(new BN(devFundBalance)));
+        });
+
         it('shares supply and holder will change after create shares', async function () {
             expect(await trendsSharesV1.sharesSupply(subject0)).to.be.bignumber.equal(new BN(1));
             expect(await trendsSharesV1.sharesBalance(subject0, creator1)).to.be.bignumber.equal(new BN(1));
         });
 
         it('creator can create several shares', async function () {
-            await trendsSharesV1.createShares(subject1, declineRatio, {from: creator1});
+            await trendsSharesV1.createShares(subject1, declineRatio, {from: creator1, value: createSubjectFee});
         });
 
+
         it('fails if shares exists', async function () {
-            await expectRevertCustomError(trendsSharesV1.createShares(subject0, declineRatio, {from: creator1}), "ShareCreated");
+            await expectRevertCustomError(trendsSharesV1.createShares(subject0, declineRatio, {
+                from: creator1,
+                value: createSubjectFee
+            }), "ShareCreated");
+        });
+
+        it('fails if with insufficient eth', async function () {
+            await expectRevertCustomError(trendsSharesV1.createShares(subject1, declineRatio, {
+                from: creator1,
+                value: createSubjectFee.subn(1)
+            }), "InsufficientEth");
+        });
+
+        it('fails if dev fund destination incorrect', async function () {
+            await trendsSharesV1.setDevFundDestination(trendsSharesV1.address, {from: developer});
+            await expectRevertCustomError(trendsSharesV1.createShares(subject1, declineRatio, {
+                from: creator1,
+                value: createSubjectFee
+            }), "UnableSendDevFund");
         });
 
         it('fails if decline ratio is 0', async function () {
-            await expectRevert(trendsSharesV1.createShares(subject1, 0, {from: creator1}), "by zero");
+            await expectRevert(trendsSharesV1.createShares(subject1, 0, {
+                from: creator1,
+                value: createSubjectFee
+            }), "by zero");
         });
 
         it('fails if decline ratio is not divisible', async function () {
-            await expectRevertCustomError(trendsSharesV1.createShares(subject1, 3, {from: creator1}), "InvalidDeclineRatio");
+            await expectRevertCustomError(trendsSharesV1.createShares(subject1, 3, {
+                from: creator1,
+                value: createSubjectFee
+            }), "InvalidDeclineRatio");
         });
     });
 
     describe('buy shares', function () {
         beforeEach(async () => {
-            await trendsSharesV1.createShares(subject0, declineRatio, {from: creator1});
+            await trendsSharesV1.createShares(subject0, declineRatio, {from: creator1, value: createSubjectFee});
             await trendsToken.transfer(buyer1, initBalance, {from: developer});
             await trendsToken.approve(trendsSharesV1.address, initBalance, {from: buyer1});
             await trendsToken.transfer(buyer2, initBalance, {from: developer});
@@ -168,7 +208,7 @@ contract('TrendsSharesV1', function (accounts) {
 
     describe('sell shares', function () {
         beforeEach(async () => {
-            await trendsSharesV1.createShares(subject0, declineRatio, {from: creator1});
+            await trendsSharesV1.createShares(subject0, declineRatio, {from: creator1, value: createSubjectFee});
             await trendsToken.transfer(buyer1, initBalance, {from: developer});
             await trendsToken.approve(trendsSharesV1.address, initBalance, {from: buyer1});
             await trendsSharesV1.buyShares(buyer1, subject0, 1, maxInAmount, {from: buyer1});
@@ -245,7 +285,7 @@ contract('TrendsSharesV1', function (accounts) {
 
     describe('collect fees', function () {
         beforeEach(async () => {
-            await trendsSharesV1.createShares(subject0, declineRatio, {from: creator1});
+            await trendsSharesV1.createShares(subject0, declineRatio, {from: creator1, value: createSubjectFee});
             await trendsToken.transfer(buyer1, initBalance, {from: developer});
             await trendsToken.approve(trendsSharesV1.address, initBalance, {from: buyer1});
             await initFee();
@@ -332,13 +372,13 @@ contract('TrendsSharesV1', function (accounts) {
         });
 
         it('get buy price', async function () {
-            await trendsSharesV1.createShares(subject0, declineRatio, {from: creator1});
+            await trendsSharesV1.createShares(subject0, declineRatio, {from: creator1, value: createSubjectFee});
             let price = await trendsSharesV1.getBuyPrice(subject0, 2);
             expect(price).to.be.bignumber.equal(share1Price.add(share2Price));
         });
 
         it('get sell price', async function () {
-            await trendsSharesV1.createShares(subject0, declineRatio, {from: creator1});
+            await trendsSharesV1.createShares(subject0, declineRatio, {from: creator1, value: createSubjectFee});
             await trendsToken.transfer(buyer1, initBalance, {from: developer});
             await trendsToken.approve(trendsSharesV1.address, initBalance, {from: buyer1});
             await trendsSharesV1.buyShares(buyer1, subject0, 2, maxInAmount, {from: buyer1});
@@ -347,14 +387,14 @@ contract('TrendsSharesV1', function (accounts) {
         });
 
         it('get buy price after fees', async function () {
-            await trendsSharesV1.createShares(subject0, declineRatio, {from: creator1});
+            await trendsSharesV1.createShares(subject0, declineRatio, {from: creator1, value: createSubjectFee});
             await initFee();
             let price = await trendsSharesV1.getBuyPriceWithFees(subject0, 1);
             expect(price).to.be.bignumber.equal(share1Price.add(totalFees));
         });
 
         it('get sell price after fees', async function () {
-            await trendsSharesV1.createShares(subject0, declineRatio, {from: creator1});
+            await trendsSharesV1.createShares(subject0, declineRatio, {from: creator1, value: createSubjectFee});
             await trendsToken.transfer(buyer1, initBalance, {from: developer});
             await trendsToken.approve(trendsSharesV1.address, initBalance, {from: buyer1});
             await trendsSharesV1.buyShares(buyer1, subject0, 1, maxInAmount, {from: buyer1});
@@ -364,7 +404,7 @@ contract('TrendsSharesV1', function (accounts) {
         });
 
         it('get last share sell price after fees', async function () {
-            await trendsSharesV1.createShares(subject0, declineRatio, {from: creator1});
+            await trendsSharesV1.createShares(subject0, declineRatio, {from: creator1, value: createSubjectFee});
             let price = await trendsSharesV1.getSellPriceWithFees(subject0, 1);
             expect(price).to.be.bignumber.equal(new BN(0));
         });
