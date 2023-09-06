@@ -7,5 +7,10 @@ module.exports = {
     solidity: "0.8.17",
     gasReporter: {
         enabled: true
-    }
+    },
+    settings: {
+        optimizer: {
+            enabled: true
+        },
+    },
 };
