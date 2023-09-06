@@ -20,7 +20,7 @@ contract TrendsSharesV1 is Ownable {
     error InvalidParams();
     error InvalidDeclineRatio();
 
-    event Create(address creator, bytes32 subject, uint256 ethFee);
+    event Create(address creator, bytes32 subject, uint24 declineRatio, uint256 ethFee);
 
     event Trade(
         address trader,
@@ -80,7 +80,7 @@ contract TrendsSharesV1 is Ownable {
         if (declineRatio * (1 ether / declineRatio) != 1 ether) revert InvalidDeclineRatio();
         // Make sure declineRatio is fully divided in calculation later
         sharesDeclineRatio[subject] = declineRatio;
-        emit Create(msg.sender, subject, msg.value);
+        emit Create(msg.sender, subject, declineRatio, msg.value);
         _buyShares(msg.sender, subject, 1, 0);
         (bool success, ) = devFundDestination.call{value: msg.value}("");
         if (!success) revert UnableSendDevFund();
