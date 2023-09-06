@@ -4,6 +4,7 @@ const TrendsSharesV1 = artifacts.require("TrendsSharesV1");
 const TrendsToken = artifacts.require("TrendsOFT");
 const crypto = require('crypto');
 const {ZERO_ADDRESS} = require("@openzeppelin/test-helpers/src/constants");
+const {web3} = require("hardhat");
 
 const eth_1 = new BN(toWei('1', 'ether'));
 const declineRatio = 16000;
