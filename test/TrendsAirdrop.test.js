@@ -62,30 +62,30 @@ contract("TrendsAirdrop", (accounts) => {
         await trendsToken.transfer(trendsAirdrop.address, _18dc(1000000), {from: developer});
     });
 
-    it("should not allow users to claim 70% airdrop without creating a subject", async () => {
+    it("should not allow users to claim airdrop without creating a subject", async () => {
         const proof = merkleTree.getHexProof(allLeaves[1]);
 
         // Create subject but is not owner
         await trendsSharesV1.createShares(subject, declineRatio, {from: airdrop[2].address, value: createSharesEthFee});
 
-        await expectRevertCustomError(trendsAirdrop.claim70(proof, airdrop[1].amount, subject, {from: user}), "NotCreator");
+        await expectRevertCustomError(trendsAirdrop.claim(proof, airdrop[1].amount, subject, {from: user}), "NotCreator");
     });
 
-    it("should allow eligible users to claim 70%, but can't claim twice", async () => {
+    it("should allow eligible users to claim, but can't claim twice", async () => {
         // Call the create room and buy shares
         await trendsSharesV1.createShares(subject, declineRatio, {from: user, value: createSharesEthFee});
 
         let proof = merkleTree.getHexProof(allLeaves[1]);
-        await trendsAirdrop.claim70(proof, airdrop[1].amount, subject, {from: user});
+        await trendsAirdrop.claim(proof, airdrop[1].amount, subject, {from: user});
         const vesting = await trendsAirdrop.vesting(user);
-        assert.equal((vesting.amount70).toString(), (BigInt(airdrop[1].amount) * BigInt(70) / BigInt(100)).toString(), "Vesting airdropAmount incorrect");
+        assert.equal(vesting.amount.toString(), airdrop[1].amount.toString(), "Vesting airdropAmount incorrect");
         assert.equal(vesting.claimedAmount.toString(), "0", "Claimed airdropAmount should be 0");
 
         await timeMachine.advanceBlock();
         const claimable = await trendsAirdrop.claimable(user);
-        assert.equal(claimable.toString(), (BigInt(_18dc(5)) * BigInt(70) / BigInt(100)).toString(), "Should have claimable");
+        assert.equal(claimable.toString(), _18dc(5).toString(), "Should have claimable");
 
-        await expectRevertCustomError(trendsAirdrop.claim70(proof, airdrop[1].amount, subject, {from: user}), "OnlyClaimOnceAllowed");
+        await expectRevertCustomError(trendsAirdrop.claim(proof, airdrop[1].amount, subject, {from: user}), "OnlyClaimOnceAllowed");
 
     });
 
@@ -94,7 +94,7 @@ contract("TrendsAirdrop", (accounts) => {
         await trendsSharesV1.createShares(subject, declineRatio, {from: user, value: createSharesEthFee});
 
         let proof = merkleTree.getHexProof(allLeaves[1]);
-        await trendsAirdrop.claim70(proof, airdrop[1].amount, subject, {from: user});
+        await trendsAirdrop.claim(proof, airdrop[1].amount, subject, {from: user});
         // Assuming the user is eligible to claim some vested tokens at this point
         let balanceBeforeVesting = await trendsToken.balanceOf(user);
         await trendsAirdrop.claimVestedAirdrop({from: user});
@@ -102,11 +102,11 @@ contract("TrendsAirdrop", (accounts) => {
         assert.isTrue(balanceAfterVesting.gt(balanceBeforeVesting), "User should have claimed some vested tokens");
     });
 
-    it("should not allow ineligible users to claim 70%", async () => {
+    it("should not allow ineligible users to claim", async () => {
         const proof = merkleTree.getHexProof(allLeaves[1]);
         await trendsSharesV1.createShares(subject, declineRatio, {from: ineligibleUser, value: createSharesEthFee});
 
-        await expectRevertCustomError(trendsAirdrop.claim70(proof, airdrop[1].amount, subject, {from: ineligibleUser}), "InvalidProof");
+        await expectRevertCustomError(trendsAirdrop.claim(proof, airdrop[1].amount, subject, {from: ineligibleUser}), "InvalidProof");
     });
 
 
@@ -118,14 +118,14 @@ contract("TrendsAirdrop", (accounts) => {
                 value: createSharesEthFee
             });
             const proof = merkleTree.getHexProof(allLeaves[index]);
-            if (index < 4) {
-                await trendsAirdrop.claim70(proof, recipient.amount, web3.utils.toHex(index), {from: recipient.address});
-            } else if (index === 4) {
-                await trendsAirdrop.claim70(proof, recipient.amount, web3.utils.toHex(index), {from: recipient.address});
+            if (index < 3) {
+                await trendsAirdrop.claim(proof, recipient.amount, web3.utils.toHex(index), {from: recipient.address});
+            } else if (index === 3) {
+                await trendsAirdrop.claim(proof, recipient.amount, web3.utils.toHex(index), {from: recipient.address});
                 const vestingDetails = await trendsAirdrop.vesting(recipient.address);
-                assert.equal(vestingDetails.amount70.toString(), _18dc(2000).toString(), "Should have only been vesting the rest");
+                assert.equal(vestingDetails.amount.toString(), _18dc(3000).toString(), "Should have only been vesting the rest");
             } else {
-                await expectRevertCustomError(trendsAirdrop.claim70(proof, recipient.amount, web3.utils.toHex(index), {from: recipient.address}), "ClaimEnded")
+                await expectRevertCustomError(trendsAirdrop.claim(proof, recipient.amount, web3.utils.toHex(index), {from: recipient.address}), "ClaimEnded")
                 break;
             }
         }
@@ -140,12 +140,12 @@ contract("TrendsAirdrop", (accounts) => {
         let proof = merkleTree.getHexProof(allLeaves[1]);
         await trendsSharesV1.createShares(subject, declineRatio, {from: user, value: createSharesEthFee});
 
-        await trendsAirdrop.claim70(proof, airdrop[1].amount, subject, {from: user});
+        await trendsAirdrop.claim(proof, airdrop[1].amount, subject, {from: user});
 
         // Get the vested amount
-        const airdropAmount = (await trendsAirdrop.vesting(user)).amount70;
+        const airdropAmount = (await trendsAirdrop.vesting(user)).amount;
 
-        // Fast-forward to the end of the vesting period
+        // Fast forward to the end of the vesting period
         for (let i = 0; i < blockPerPeriod * vestingPeriod + 1; i++) {
             await timeMachine.advanceBlock();
         }
@@ -160,19 +160,5 @@ contract("TrendsAirdrop", (accounts) => {
         assert.equal(vestingDetails.claimedAmount.toString(), airdropAmount.toString(), "Entire vested amount should have been claimed");
     });
 
-    it("should not allow ineligible users to claim 30%", async () => {
-        // const proof = merkleTree.getHexProof(allLeaves[1]);
-        // await trendsSharesV1.createShares(subject, declineRatio, {from: ineligibleUser, value: createSharesEthFee});
-        //
-        // await expectRevertCustomError(trendsAirdrop.claim30(proof, airdrop[1].amount, subject, {from: ineligibleUser}), "InvalidProof");
-    });
-
-    it("should allow eligible users to claim 30%, but can't claim twice", async () => {
-
-    });
-
-    it("should allow eligible users to claim 70% and 30% portion, and claim correct amount", async () => {
-
-    });
 
 });
