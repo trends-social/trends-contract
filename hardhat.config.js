@@ -4,13 +4,16 @@ require('solidity-coverage')
 require("hardhat-gas-reporter");
 
 module.exports = {
-    solidity: "0.8.17",
+    solidity: {
+        version: "0.8.17",
+        settings: {
+            optimizer: {
+                enabled: true
+            },
+        },
+    },
     gasReporter: {
         enabled: true
     },
-    settings: {
-        optimizer: {
-            enabled: true
-        },
-    },
+
 };
