@@ -1,6 +1,7 @@
 const {BN} = require("@openzeppelin/test-helpers");
 const {toWei} = require("web3-utils");
 const TrendsSharesV1 = artifacts.require("TrendsSharesV1");
+const TrendsSharesHelper = artifacts.require("TrendsSharesHelper");
 const TrendsToken = artifacts.require("TrendsOFT");
 const crypto = require('crypto');
 const {ZERO_ADDRESS} = require("@openzeppelin/test-helpers/src/constants");
@@ -26,6 +27,11 @@ async function newToken(account) {
 async function newSharesV1(token, account) {
     return await TrendsSharesV1.new(token, {from: account});
 }
+
+async function newSharesHelper(trendsSharesV1, account) {
+    return await TrendsSharesHelper.new(trendsSharesV1, {from: account});
+}
+
 
 async function expectRevert(promise, errorMsg) {
     await promise.then(
@@ -84,5 +90,6 @@ module.exports = {
     initBalance,
     merkleize,
     hash,
-    createSharesEthFee
+    createSharesEthFee,
+    newSharesHelper
 };
