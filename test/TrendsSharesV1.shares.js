@@ -48,7 +48,7 @@ contract('TrendsSharesV1', function (accounts) {
         });
         it('create shares emit event', async function () {
             expectEvent(createTxReceipt, 'Create', {
-                creator: creator1, subject: subject0, ethFee: createSharesEthFee
+                creator: creator1, subject: subject0, declineRatio: new BN(declineRatio), ethFee: createSharesEthFee
             });
             expectEvent(createTxReceipt, 'Trade', {
                 trader: creator1,
