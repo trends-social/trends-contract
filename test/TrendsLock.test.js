@@ -1,10 +1,6 @@
 const {
-    expectRevert, subject1, createSharesEthFee, newToken, expectRevertCustomError, eth_1,
-    subject0,
-    share1Price,
-    share2Price
+    expectRevert, newToken, expectRevertCustomError, eth_1
 } = require("./utils");
-const {web3} = require("hardhat");
 const {expect} = require("chai");
 const TrendsLock = artifacts.require("TrendsLock");
 const {time, takeSnapshot} = require("@nomicfoundation/hardhat-network-helpers");
@@ -222,7 +218,7 @@ contract('TrendsLock', function (accounts) {
         it('team correct after transfer and time elapse 1s', async function () {
             let transferAmount = lockAmount.divn(10);
             await trendsLock.transfer(user2, transferAmount, {from: team});
-            let newStartTime=await time.latest();
+            let newStartTime = await time.latest();
             await time.increase(1);
             let claimedAmount = await trendsToken.balanceOf(team);
             expect(await trendsLock.getClaimableAmount(team)).to.be.bignumber.eq(
@@ -232,7 +228,7 @@ contract('TrendsLock', function (accounts) {
         it('user2 correct after transfer and time elapse 1s', async function () {
             let transferAmount = lockAmount.divn(10);
             await trendsLock.transfer(user2, transferAmount, {from: team});
-            let newStartTime=await time.latest();
+            let newStartTime = await time.latest();
             await time.increase(1);
             expect(await trendsLock.getClaimableAmount(user2)).to.be.bignumber.eq(
                 transferAmount.divn(endTime - newStartTime));
