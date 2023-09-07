@@ -15,6 +15,11 @@ contract TrendsSharesHelper {
         uint256 earnings;
     }
 
+    struct SubjectPrice {
+        bytes32 subject;
+        uint256 price;
+    }
+
     function getSharesAndEarnings(address wallet, bytes32[] memory subjects) external view returns (SubjectInfo[] memory) {
         SubjectInfo[] memory subjectInfos = new SubjectInfo[](subjects.length);
 
@@ -32,4 +37,22 @@ contract TrendsSharesHelper {
 
         return subjectInfos;
     }
+
+    function getLatestPrices(bytes32[] memory subjects) external view returns (SubjectPrice[] memory) {
+        SubjectPrice[] memory subjectPrices = new SubjectPrice[](subjects.length);
+
+        for (uint i = 0; i < subjects.length; i++) {
+            bytes32 subject = subjects[i];
+
+            uint24 declineRatio = trendsShares.sharesDeclineRatio(subject);
+            uint256 supply = trendsShares.sharesSupply(subject);
+
+            // Assuming amount is 1 to get the current price
+            uint256 price = trendsShares.getPrice(supply, 1, declineRatio);
+            subjectPrices[i] = SubjectPrice(subject, price);
+        }
+
+        return subjectPrices;
+    }
+
 }
