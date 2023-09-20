@@ -5,9 +5,7 @@ import "@layerzerolabs/solidity-examples/contracts/token/oft/extension/PausableO
 
 contract TrendsOFT is PausableOFT {
     constructor(string memory _name, string memory _symbol, address _lzEndpoint, uint256 _mintAmount) PausableOFT(_name, _symbol, _lzEndpoint) {
-        if (_mintAmount > 0) {
             _mint(msg.sender, _mintAmount);
-        }
     }
 
     function burn(uint256 _amount) external {
